@@ -25,18 +25,22 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 )
 
+type blockGetter interface {
+	GetBlock(common.Hash) *types.Block
+}
+
 type VMEnv struct {
 	state  *state.StateDB
 	header *types.Header
 	msg    Message
 	depth  int
-	chain  *BlockChain
+	chain  blockGetter
 	typ    vm.Type
 	// structured logging
 	logs []vm.StructLog
 }
 
-func NewEnv(state *state.StateDB, chain *BlockChain, msg Message, header *types.Header) *VMEnv {
+func NewEnv(state *state.StateDB, chain blockGetter, msg Message, header *types.Header) *VMEnv {
 	return &VMEnv{
 		chain:  chain,
 		state:  state,
