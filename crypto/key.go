@@ -24,7 +24,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/matthieu/go-ethereum/common"
 	"github.com/pborman/uuid"
 )
 

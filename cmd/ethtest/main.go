@@ -26,9 +26,9 @@ import (
 	"strings"
 
 	"github.com/codegangsta/cli"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/logger/glog"
-	"github.com/ethereum/go-ethereum/tests"
+	"github.com/matthieu/go-ethereum/core/vm"
+	"github.com/matthieu/go-ethereum/logger/glog"
+	"github.com/matthieu/go-ethereum/tests"
 )
 
 var (

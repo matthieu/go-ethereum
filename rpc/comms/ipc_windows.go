@@ -28,9 +28,9 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/ethereum/go-ethereum/rpc/codec"
-	"github.com/ethereum/go-ethereum/rpc/shared"
-	"github.com/ethereum/go-ethereum/rpc/useragent"
+	"github.com/matthieu/go-ethereum/rpc/codec"
+	"github.com/matthieu/go-ethereum/rpc/shared"
+	"github.com/matthieu/go-ethereum/rpc/useragent"
 )
 
 var (

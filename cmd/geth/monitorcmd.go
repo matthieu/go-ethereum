@@ -26,11 +26,11 @@ import (
 	"time"
 
 	"github.com/codegangsta/cli"
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/rpc/codec"
-	"github.com/ethereum/go-ethereum/rpc/comms"
+	"github.com/matthieu/go-ethereum/cmd/utils"
+	"github.com/matthieu/go-ethereum/common"
+	"github.com/matthieu/go-ethereum/rpc"
+	"github.com/matthieu/go-ethereum/rpc/codec"
+	"github.com/matthieu/go-ethereum/rpc/comms"
 	"github.com/gizak/termui"
 )
 

@@ -19,7 +19,7 @@ package core
 import (
 	"runtime"
 
-	"github.com/ethereum/go-ethereum/pow"
+	"github.com/matthieu/go-ethereum/pow"
 	"github.com/matthieu/go-ethereum/core/types"
 )
 
