@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/ethash"
+	"github.com/matthieu/ethash"
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/core/types"
 	"github.com/matthieu/go-ethereum/logger"
