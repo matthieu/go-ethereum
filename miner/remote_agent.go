@@ -23,7 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/ethash"
+	"github.com/matthieu/ethash"
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/logger"
 	"github.com/matthieu/go-ethereum/logger/glog"
