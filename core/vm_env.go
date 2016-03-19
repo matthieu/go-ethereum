@@ -121,7 +121,11 @@ func (self *VMEnv) AddStructLog(log vm.StructLog) {
 }
 
 func (self *VMEnv) AddInternalTransaction(inttx interface{}) {
-	self.internalTxs = append(self.internalTxs, inttx.(*types.InternalTransaction))
+	internal := inttx.(*types.InternalTransaction)
+	internal.ParentHash = self.hash
+	internal.Index = len(self.internalTxs)
+	internal.Depth = self.Depth()
+	self.internalTxs = append(self.internalTxs, internal)
 }
 
 func (self *VMEnv) InternalTransactions() []*types.InternalTransaction {

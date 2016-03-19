@@ -91,20 +91,24 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		from = env.Db().GetAccount(caller.Address())
 		to   vm.Account
 	)
+	var note string
 	if createAccount {
 		to = env.Db().CreateAccount(*address)
+		note = "create"
 	} else {
 		if !env.Db().Exist(*address) {
 			to = env.Db().CreateAccount(*address)
 		} else {
 			to = env.Db().GetAccount(*address)
 		}
+		note = "call"
 	}
 	env.Transfer(from, to, value)
 
 	nonce := env.Db().GetNonce(caller.Address())
-	env.AddInternalTransaction(types.NewInternalTransaction(
-		nonce, gasPrice, gas, caller.Address(), *address, value, code, env.OriginationHash(), env.Depth()))
+	inttx := types.NewInternalTransaction(
+		nonce, gasPrice, gas, caller.Address(), *address, value, code, note)
+	env.AddInternalTransaction(inttx)
 
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
@@ -133,6 +137,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// when we're in homestead this also counts for code storage gas errors.
 	if err != nil && (params.IsHomestead(env.BlockNumber()) || err != vm.CodeStoreOutOfGasError) {
 		contract.UseGas(contract.Gas)
+		inttx.Reject()
 
 		env.SetSnapshot(snapshotPreTransfer)
 	}
@@ -158,6 +163,11 @@ func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toA
 		to = env.Db().GetAccount(*toAddr)
 	}
 
+	nonce := env.Db().GetNonce(caller.Address())
+	inttx := types.NewInternalTransaction(
+		nonce, gasPrice, gas, caller.Address(), *toAddr, value, code, "call")
+	env.AddInternalTransaction(inttx)
+
 	// Iinitialise a new contract and make initialise the delegate values
 	contract := vm.NewContract(caller, to, value, gas, gasPrice).AsDelegate()
 	contract.SetCallCode(codeAddr, code)
@@ -166,6 +176,7 @@ func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toA
 	ret, err = evm.Run(contract, input)
 	if err != nil {
 		contract.UseGas(contract.Gas)
+		inttx.Reject()
 
 		env.SetSnapshot(snapshot)
 	}
