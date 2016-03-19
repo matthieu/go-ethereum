@@ -36,6 +36,8 @@ type Environment interface {
 	SetSnapshot(Database)
 	// Address of the original invoker (first occurance of the VM invoker)
 	Origin() common.Address
+	// Hash of the original transaction/message
+	OriginationHash() common.Hash
 	// The block number this VM is invoken on
 	BlockNumber() *big.Int
 	// The n'th hash ago from this block number
@@ -58,6 +60,8 @@ type Environment interface {
 	AddStructLog(StructLog)
 	// Returns all coalesced structured logs
 	StructLogs() []StructLog
+	// Records an additional internal transaction on this env
+	AddInternalTransaction(inttx interface{})
 
 	// Type of the VM
 	VmType() Type

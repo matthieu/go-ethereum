@@ -20,9 +20,10 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/matthieu/go-ethereum/core/types"
+	"github.com/matthieu/go-ethereum/core/vm"
 )
 
 // Call executes within the given contract
@@ -100,6 +101,10 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		}
 	}
 	env.Transfer(from, to, value)
+
+	nonce := env.Db().GetNonce(caller.Address())
+	env.AddInternalTransaction(types.NewInternalTransaction(
+		nonce, gasPrice, gas, caller.Address(), *address, value, code, env.OriginationHash(), env.Depth()))
 
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context

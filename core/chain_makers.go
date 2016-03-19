@@ -21,11 +21,12 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/pow"
+
+	"github.com/matthieu/go-ethereum/core/state"
+	"github.com/matthieu/go-ethereum/core/types"
 )
 
 // FakePow is a non-validating proof of work implementation.
@@ -90,7 +91,7 @@ func (b *BlockGen) AddTx(tx *types.Transaction) {
 	if b.gasPool == nil {
 		b.SetCoinbase(common.Address{})
 	}
-	_, gas, err := ApplyMessage(NewEnv(b.statedb, nil, tx, b.header), tx, b.gasPool)
+	_, gas, err := ApplyMessage(NewEnv(b.statedb, nil, tx, b.header, tx.Hash()), tx, b.gasPool)
 	if err != nil {
 		panic(err)
 	}

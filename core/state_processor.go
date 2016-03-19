@@ -3,12 +3,13 @@ package core
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/logger"
 	"github.com/ethereum/go-ethereum/logger/glog"
+
+	"github.com/matthieu/go-ethereum/core/state"
+	"github.com/matthieu/go-ethereum/core/types"
+	"github.com/matthieu/go-ethereum/core/vm"
 )
 
 var (
@@ -31,28 +32,30 @@ func NewStateProcessor(bc blockGetter) *StateProcessor {
 // Process returns the receipts and logs accumulated during the process and
 // returns the amount of gas that was used in the process. If any of the
 // transactions failed to execute due to insufficient gas it will return an error.
-func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (types.Receipts, vm.Logs, *big.Int, error) {
+func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (types.Receipts, vm.Logs, types.InternalTransactions, *big.Int, error) {
 	var (
 		receipts     types.Receipts
 		totalUsedGas = big.NewInt(0)
 		err          error
 		header       = block.Header()
 		allLogs      vm.Logs
+		allIntTxs    types.InternalTransactions
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
 
 	for i, tx := range block.Transactions() {
 		statedb.StartRecord(tx.Hash(), block.Hash(), i)
-		receipt, logs, _, err := ApplyTransaction(p.bc, gp, statedb, header, tx, totalUsedGas)
+		receipt, logs, inttxs, _, err := ApplyTransaction(p.bc, gp, statedb, header, tx, totalUsedGas)
 		if err != nil {
-			return nil, nil, totalUsedGas, err
+			return nil, nil, nil, totalUsedGas, err
 		}
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, logs...)
+		allIntTxs = append(allIntTxs, inttxs...)
 	}
 	AccumulateRewards(statedb, header, block.Uncles())
 
-	return receipts, allLogs, totalUsedGas, err
+	return receipts, allLogs, allIntTxs, totalUsedGas, err
 }
 
 // ApplyTransaction attemps to apply a transaction to the given state database
@@ -60,10 +63,12 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 //
 // ApplyTransactions returns the generated receipts and vm logs during the
 // execution of the state transition phase.
-func ApplyTransaction(bc blockGetter, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, vm.Logs, *big.Int, error) {
-	_, gas, err := ApplyMessage(NewEnv(statedb, bc, tx, header), tx, gp)
+func ApplyTransaction(bc blockGetter, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, vm.Logs, types.InternalTransactions, *big.Int, error) {
+
+	env := NewEnv(statedb, bc, tx, header, tx.Hash())
+	_, gas, err := ApplyMessage(env, tx, gp)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	// Update the state with pending changes
@@ -82,7 +87,7 @@ func ApplyTransaction(bc blockGetter, gp *GasPool, statedb *state.StateDB, heade
 
 	glog.V(logger.Debug).Infoln(receipt)
 
-	return receipt, logs, gas, err
+	return receipt, logs, env.InternalTransactions(), gas, err
 }
 
 // AccumulateRewards credits the coinbase of the given block with the

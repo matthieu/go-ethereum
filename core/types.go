@@ -20,11 +20,12 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
+
+	"github.com/matthieu/go-ethereum/core/state"
+	"github.com/matthieu/go-ethereum/core/types"
+	"github.com/matthieu/go-ethereum/core/vm"
 )
 
 // Validator is an interface which defines the standard for block validation.
@@ -53,7 +54,8 @@ type Validator interface {
 // of gas used in the process and return an error if any of the internal rules
 // failed.
 type Processor interface {
-	Process(block *types.Block, statedb *state.StateDB) (types.Receipts, vm.Logs, *big.Int, error)
+	Process(block *types.Block, statedb *state.StateDB) (
+		types.Receipts, vm.Logs, types.InternalTransactions, *big.Int, error)
 }
 
 // Backend is an interface defining the basic functionality for an operable node

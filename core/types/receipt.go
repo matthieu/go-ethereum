@@ -22,8 +22,9 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/rlp"
+
+	"github.com/matthieu/go-ethereum/core/vm"
 )
 
 // Receipt represents the results of a transaction.
