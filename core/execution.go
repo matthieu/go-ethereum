@@ -20,10 +20,10 @@ import (
 	"math/big"
 
 	"github.com/matthieu/go-ethereum/common"
-	"github.com/matthieu/go-ethereum/crypto"
-	"github.com/matthieu/go-ethereum/params"
 	"github.com/matthieu/go-ethereum/core/types"
 	"github.com/matthieu/go-ethereum/core/vm"
+	"github.com/matthieu/go-ethereum/crypto"
+	"github.com/matthieu/go-ethereum/params"
 )
 
 // Call executes within the given contract
@@ -105,10 +105,13 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	}
 	env.Transfer(from, to, value)
 
-	nonce := env.Db().GetNonce(caller.Address())
-	inttx := types.NewInternalTransaction(
-		nonce, gasPrice, gas, caller.Address(), *address, value, code, note)
-	env.AddInternalTransaction(inttx)
+	var inttx *types.InternalTransaction
+	if env.Depth() > 0 {
+		nonce := env.Db().GetNonce(caller.Address())
+		inttx = types.NewInternalTransaction(
+			nonce, gasPrice, gas, caller.Address(), *address, value, code, note)
+		env.AddInternalTransaction(inttx)
+	}
 
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
@@ -137,7 +140,9 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// when we're in homestead this also counts for code storage gas errors.
 	if err != nil && (params.IsHomestead(env.BlockNumber()) || err != vm.CodeStoreOutOfGasError) {
 		contract.UseGas(contract.Gas)
-		inttx.Reject()
+		if inttx != nil {
+			inttx.Reject()
+		}
 
 		env.SetSnapshot(snapshotPreTransfer)
 	}
@@ -163,10 +168,13 @@ func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toA
 		to = env.Db().GetAccount(*toAddr)
 	}
 
-	nonce := env.Db().GetNonce(caller.Address())
-	inttx := types.NewInternalTransaction(
-		nonce, gasPrice, gas, caller.Address(), *toAddr, value, code, "call")
-	env.AddInternalTransaction(inttx)
+	var inttx *types.InternalTransaction
+	if env.Depth() > 0 {
+		nonce := env.Db().GetNonce(caller.Address())
+		inttx = types.NewInternalTransaction(
+			nonce, gasPrice, gas, caller.Address(), *toAddr, value, code, "call")
+		env.AddInternalTransaction(inttx)
+	}
 
 	// Iinitialise a new contract and make initialise the delegate values
 	contract := vm.NewContract(caller, to, value, gas, gasPrice).AsDelegate()
@@ -176,7 +184,9 @@ func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toA
 	ret, err = evm.Run(contract, input)
 	if err != nil {
 		contract.UseGas(contract.Gas)
-		inttx.Reject()
+		if inttx != nil {
+			inttx.Reject()
+		}
 
 		env.SetSnapshot(snapshot)
 	}
