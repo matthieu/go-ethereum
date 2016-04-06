@@ -17,6 +17,15 @@ var (
 	big32 = big.NewInt(32)
 )
 
+type TxExecReport struct {
+	Transaction *types.Transaction
+	Internals   types.InternalTransactions
+	Errored     error
+	GasUsed     *big.Int
+	GasLeftover *big.Int
+	GasRefund   *big.Int
+}
+
 type StateProcessor struct {
 	bc blockGetter
 }
@@ -32,30 +41,30 @@ func NewStateProcessor(bc blockGetter) *StateProcessor {
 // Process returns the receipts and logs accumulated during the process and
 // returns the amount of gas that was used in the process. If any of the
 // transactions failed to execute due to insufficient gas it will return an error.
-func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (types.Receipts, vm.Logs, types.InternalTransactions, *big.Int, error) {
+func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (types.Receipts, vm.Logs, []*TxExecReport, *big.Int, error) {
 	var (
 		receipts     types.Receipts
 		totalUsedGas = big.NewInt(0)
 		err          error
 		header       = block.Header()
 		allLogs      vm.Logs
-		allIntTxs    types.InternalTransactions
+		allReports   []*TxExecReport
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
 
 	for i, tx := range block.Transactions() {
 		statedb.StartRecord(tx.Hash(), block.Hash(), i)
-		receipt, logs, inttxs, _, err := ApplyTransaction(p.bc, gp, statedb, header, tx, totalUsedGas)
+		receipt, logs, report, err := ApplyTransaction(p.bc, gp, statedb, header, tx, totalUsedGas)
 		if err != nil {
 			return nil, nil, nil, totalUsedGas, err
 		}
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, logs...)
-		allIntTxs = append(allIntTxs, inttxs...)
+		allReports = append(allReports, report)
 	}
 	AccumulateRewards(statedb, header, block.Uncles())
 
-	return receipts, allLogs, allIntTxs, totalUsedGas, err
+	return receipts, allLogs, allReports, totalUsedGas, err
 }
 
 // ApplyTransaction attemps to apply a transaction to the given state database
@@ -63,19 +72,20 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 //
 // ApplyTransactions returns the generated receipts and vm logs during the
 // execution of the state transition phase.
-func ApplyTransaction(bc blockGetter, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, vm.Logs, types.InternalTransactions, *big.Int, error) {
+func ApplyTransaction(bc blockGetter, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, vm.Logs, *TxExecReport, error) {
 
+	report := &TxExecReport{Transaction: tx}
 	env := NewEnv(statedb, bc, tx, header, tx.Hash())
-	_, gas, err := ApplyMessage(env, tx, gp)
+	_, err := ApplyMessage(env, tx, gp, report)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Update the state with pending changes
-	usedGas.Add(usedGas, gas)
+	usedGas.Add(usedGas, report.GasUsed)
 	receipt := types.NewReceipt(statedb.IntermediateRoot().Bytes(), usedGas)
 	receipt.TxHash = tx.Hash()
-	receipt.GasUsed = new(big.Int).Set(gas)
+	receipt.GasUsed = new(big.Int).Set(report.GasUsed)
 	if MessageCreatesContract(tx) {
 		from, _ := tx.From()
 		receipt.ContractAddress = crypto.CreateAddress(from, tx.Nonce())
@@ -86,8 +96,9 @@ func ApplyTransaction(bc blockGetter, gp *GasPool, statedb *state.StateDB, heade
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
 	glog.V(logger.Debug).Infoln(receipt)
+	report.Internals = env.InternalTransactions()
 
-	return receipt, logs, env.InternalTransactions(), gas, err
+	return receipt, logs, report, err
 }
 
 // AccumulateRewards credits the coinbase of the given block with the

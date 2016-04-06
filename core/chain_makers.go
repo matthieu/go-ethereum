@@ -91,10 +91,12 @@ func (b *BlockGen) AddTx(tx *types.Transaction) {
 	if b.gasPool == nil {
 		b.SetCoinbase(common.Address{})
 	}
-	_, gas, err := ApplyMessage(NewEnv(b.statedb, nil, tx, b.header, tx.Hash()), tx, b.gasPool)
+	report := &TxExecReport{Transaction: tx}
+	_, err := ApplyMessage(NewEnv(b.statedb, nil, tx, b.header, tx.Hash()), tx, b.gasPool, report)
 	if err != nil {
 		panic(err)
 	}
+	gas := report.GasUsed
 	root := b.statedb.IntermediateRoot()
 	b.header.GasUsed.Add(b.header.GasUsed, gas)
 	receipt := types.NewReceipt(root.Bytes(), b.header.GasUsed)

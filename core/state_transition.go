@@ -58,7 +58,8 @@ type StateTransition struct {
 	data          []byte
 	state         vm.Database
 
-	env vm.Environment
+	env    vm.Environment
+	report *TxExecReport
 }
 
 // Message represents a message sent to a contract.
@@ -105,7 +106,7 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
 	return igas
 }
 
-func ApplyMessage(env vm.Environment, msg Message, gp *GasPool) ([]byte, *big.Int, error) {
+func ApplyMessage(env vm.Environment, msg Message, gp *GasPool, report *TxExecReport) ([]byte, error) {
 	var st = StateTransition{
 		gp:         gp,
 		env:        env,
@@ -116,6 +117,7 @@ func ApplyMessage(env vm.Environment, msg Message, gp *GasPool) ([]byte, *big.In
 		value:      msg.Value(),
 		data:       msg.Data(),
 		state:      env.Db(),
+		report:     report,
 	}
 	return st.transitionDb()
 }
@@ -210,7 +212,7 @@ func (self *StateTransition) preCheck() (err error) {
 	return nil
 }
 
-func (self *StateTransition) transitionDb() (ret []byte, usedGas *big.Int, err error) {
+func (self *StateTransition) transitionDb() (ret []byte, err error) {
 	if err = self.preCheck(); err != nil {
 		return
 	}
@@ -221,7 +223,7 @@ func (self *StateTransition) transitionDb() (ret []byte, usedGas *big.Int, err e
 	contractCreation := MessageCreatesContract(msg)
 	// Pay intrinsic gas
 	if err = self.useGas(IntrinsicGas(self.data, contractCreation, homestead)); err != nil {
-		return nil, nil, InvalidTxError(err)
+		return nil, InvalidTxError(err)
 	}
 
 	vmenv := self.env
@@ -246,11 +248,12 @@ func (self *StateTransition) transitionDb() (ret []byte, usedGas *big.Int, err e
 	}
 
 	if err != nil && IsValueTransferErr(err) {
-		return nil, nil, InvalidTxError(err)
+		return nil, InvalidTxError(err)
 	}
 
 	// We aren't interested in errors here. Errors returned by the VM are non-consensus errors and therefor shouldn't bubble up
 	if err != nil {
+		self.report.Errored = err
 		err = nil
 	}
 
@@ -261,7 +264,9 @@ func (self *StateTransition) transitionDb() (ret []byte, usedGas *big.Int, err e
 	self.refundGas()
 	self.state.AddBalance(self.env.Coinbase(), new(big.Int).Mul(self.gasUsed(), self.gasPrice))
 
-	return ret, self.gasUsed(), err
+	self.report.GasUsed = self.gasUsed()
+
+	return ret, err
 }
 
 func (self *StateTransition) refundGas() {
@@ -270,10 +275,12 @@ func (self *StateTransition) refundGas() {
 	sender, _ := self.from() // err already checked
 	remaining := new(big.Int).Mul(self.gas, self.gasPrice)
 	sender.AddBalance(remaining)
+	self.report.GasLeftover = new(big.Int).Set(self.gas)
 
 	// Apply refund counter, capped to half of the used gas.
 	uhalf := remaining.Div(self.gasUsed(), common.Big2)
 	refund := common.BigMin(uhalf, self.state.GetRefund())
+	self.report.GasRefund = new(big.Int).Set(refund)
 	self.gas.Add(self.gas, refund)
 	self.state.AddBalance(sender.Address(), refund.Mul(refund, self.gasPrice))
 

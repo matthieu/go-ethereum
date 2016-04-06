@@ -17,6 +17,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/matthieu/go-ethereum/common"
@@ -170,6 +171,7 @@ func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toA
 
 	var inttx *types.InternalTransaction
 	if env.Depth() > 0 {
+		fmt.Println("1====", env.Depth(), caller.Address().Hex())
 		nonce := env.Db().GetNonce(caller.Address())
 		inttx = types.NewInternalTransaction(
 			nonce, gasPrice, gas, caller.Address(), *toAddr, value, code, "call")

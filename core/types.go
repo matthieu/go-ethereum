@@ -55,7 +55,7 @@ type Validator interface {
 // failed.
 type Processor interface {
 	Process(block *types.Block, statedb *state.StateDB) (
-		types.Receipts, vm.Logs, types.InternalTransactions, *big.Int, error)
+		types.Receipts, vm.Logs, []*TxExecReport, *big.Int, error)
 }
 
 // Backend is an interface defining the basic functionality for an operable node
