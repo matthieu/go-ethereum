@@ -78,6 +78,8 @@ type Environment interface {
 	DelegateCall(me ContractRef, addr common.Address, data []byte, gas, price *big.Int) ([]byte, error)
 	// Create a new contract
 	Create(me ContractRef, data []byte, gas, price, value *big.Int) ([]byte, common.Address, error)
+	// Contract commits suicide
+	Suicide(me ContractRef, origin common.Address) error
 }
 
 // Database is a EVM database for full state querying

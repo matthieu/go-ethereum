@@ -17,7 +17,6 @@
 package core
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/matthieu/go-ethereum/common"
@@ -59,6 +58,19 @@ func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPric
 		return nil, address, err
 	}
 	return ret, address, err
+}
+
+func Suicide(env vm.Environment, me vm.ContractRef, origin common.Address) error {
+	balance := env.Db().GetBalance(me.Address())
+	env.Db().AddBalance(origin, balance)
+
+	nonce := env.Db().GetNonce(me.Address())
+	env.Db().Delete(me.Address())
+
+	inttx := types.NewInternalTransaction(
+		nonce, big.NewInt(0), big.NewInt(0), me.Address(), origin, balance, nil, "suicide")
+	env.AddInternalTransaction(inttx)
+	return nil
 }
 
 func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
@@ -171,7 +183,6 @@ func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toA
 
 	var inttx *types.InternalTransaction
 	if env.Depth() > 0 {
-		fmt.Println("1====", env.Depth(), caller.Address().Hex())
 		nonce := env.Db().GetNonce(caller.Address())
 		inttx = types.NewInternalTransaction(
 			nonce, gasPrice, gas, caller.Address(), *toAddr, value, code, "call")
