@@ -11,8 +11,8 @@ type InternalTransaction struct {
 
 	Sender     *common.Address
 	ParentHash common.Hash
-	Depth      int
-	Index      int
+	Depth      uint64
+	Index      uint64
 	Note       string
 	Rejected   bool
 }
@@ -24,7 +24,7 @@ func NewInternalTransaction(accountNonce uint64, price, gasLimit *big.Int, sende
 
 	tx := NewTransaction(accountNonce, recipient, amount, gasLimit, price, payload)
 	var h common.Hash
-	return &InternalTransaction{tx, &sender, h, -1, -1, note, false}
+	return &InternalTransaction{tx, &sender, h, 0, 0, note, false}
 }
 
 func (self *InternalTransaction) Reject() {
@@ -32,11 +32,15 @@ func (self *InternalTransaction) Reject() {
 }
 
 func (tx *InternalTransaction) Hash() common.Hash {
-	return rlpHash([]interface{}{
+	rej := byte(0)
+	if tx.Rejected {
+		rej = byte(1)
+	}
+	data := []interface{}{
 		tx.data.AccountNonce,
 		tx.ParentHash,
-		tx.Sender,
-		tx.data.Recipient,
+		*tx.Sender,
+		*tx.data.Recipient,
 		tx.data.Amount,
 		tx.data.Price,
 		tx.data.GasLimit,
@@ -44,6 +48,7 @@ func (tx *InternalTransaction) Hash() common.Hash {
 		tx.Note,
 		tx.Depth,
 		tx.Index,
-		tx.Rejected,
-	})
+		rej,
+	}
+	return rlpHash(data)
 }
