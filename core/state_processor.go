@@ -20,6 +20,7 @@ var (
 type TxExecReport struct {
 	Transaction *types.Transaction
 	Internals   types.InternalTransactions
+	Receipt     *types.Receipt
 	Errored     error
 	GasUsed     *big.Int
 	GasLeftover *big.Int
@@ -97,6 +98,7 @@ func ApplyTransaction(bc blockGetter, gp *GasPool, statedb *state.StateDB, heade
 
 	glog.V(logger.Debug).Infoln(receipt)
 	report.Internals = env.InternalTransactions()
+	report.Receipt = receipt
 
 	return receipt, logs, report, err
 }
