@@ -749,6 +749,10 @@ func (self *ProtocolManager) txBroadcastLoop() {
 	}
 }
 
+func (self *ProtocolManager) PeerCount() int {
+	return self.peers.Len()
+}
+
 // EthNodeInfo represents a short summary of the Ethereum sub-protocol metadata known
 // about the host peer.
 type EthNodeInfo struct {
