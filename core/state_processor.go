@@ -21,7 +21,7 @@ type TxExecReport struct {
 	Transaction *types.Transaction
 	Internals   types.InternalTransactions
 	Receipt     *types.Receipt
-	Errored     error
+	Errored     string
 	GasUsed     *big.Int
 	GasLeftover *big.Int
 	GasRefund   *big.Int

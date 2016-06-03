@@ -253,7 +253,7 @@ func (self *StateTransition) transitionDb() (ret []byte, err error) {
 
 	// We aren't interested in errors here. Errors returned by the VM are non-consensus errors and therefor shouldn't bubble up
 	if err != nil {
-		self.report.Errored = err
+		self.report.Errored = err.Error()
 		err = nil
 	}
 
