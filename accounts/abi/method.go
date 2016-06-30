@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/matthieu/go-ethereum/crypto"
 )
 
 // Callable method given a `Name` and whether the method is a constant.
@@ -114,5 +114,5 @@ func (m Method) String() string {
 }
 
 func (m Method) Id() []byte {
-	return crypto.Keccak256([]byte(m.Sig()))[:4]
+	return crypto.Sha3([]byte(m.Sig()))[:4]
 }

@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/matthieu/go-ethereum/common"
+	"github.com/matthieu/go-ethereum/crypto"
 )
 
 // Event is an event potentially triggered by the EVM's LOG mechanism. The Event
@@ -40,5 +40,5 @@ func (e Event) Id() common.Hash {
 		types[i] = input.Type.String()
 		i++
 	}
-	return common.BytesToHash(crypto.Keccak256([]byte(fmt.Sprintf("%v(%v)", e.Name, strings.Join(types, ",")))))
+	return common.BytesToHash(crypto.Sha3([]byte(fmt.Sprintf("%v(%v)", e.Name, strings.Join(types, ",")))))
 }
