@@ -80,7 +80,7 @@ func MessageCreatesContract(msg Message) bool {
 	return msg.To() == nil
 }
 
-// IntrinsicGas computes the 'intrisic gas' for a message
+// IntrinsicGas computes the 'intrinsic gas' for a message
 // with the given data.
 func IntrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
 	igas := new(big.Int)
@@ -106,8 +106,9 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
 	return igas
 }
 
-func ApplyMessage(env vm.Environment, msg Message, gp *GasPool, report *TxExecReport) ([]byte, error) {
-	var st = StateTransition{
+// NewStateTransition initialises and returns a new state transition object.
+func NewStateTransition(env vm.Environment, msg Message, gp *GasPool, report *TxExecReport) *StateTransition {
+	return &StateTransition{
 		gp:         gp,
 		env:        env,
 		msg:        msg,
@@ -119,7 +120,20 @@ func ApplyMessage(env vm.Environment, msg Message, gp *GasPool, report *TxExecRe
 		state:      env.Db(),
 		report:     report,
 	}
-	return st.transitionDb()
+}
+
+// ApplyMessage computes the new state by applying the given message
+// against the old state within the environment.
+//
+// ApplyMessage returns the bytes returned by any EVM execution (if it took place),
+// the gas used (which includes gas refunds) and an error if it failed. An error always
+// indicates a core error meaning that the message would always fail for that particular
+// state and would never be accepted within a block.
+func ApplyMessage(env vm.Environment, msg Message, gp *GasPool, report *TxExecReport) ([]byte, *big.Int, error) {
+	st := NewStateTransition(env, msg, gp, report)
+
+	ret, _, gasUsed, err := st.TransitionDb()
+	return ret, gasUsed, err
 }
 
 func (self *StateTransition) from() (vm.Account, error) {
@@ -127,7 +141,7 @@ func (self *StateTransition) from() (vm.Account, error) {
 		f   common.Address
 		err error
 	)
-	if params.IsHomestead(self.env.BlockNumber()) {
+	if self.env.RuleSet().IsHomestead(self.env.BlockNumber()) {
 		f, err = self.msg.From()
 	} else {
 		f, err = self.msg.FromFrontier()
@@ -140,6 +154,7 @@ func (self *StateTransition) from() (vm.Account, error) {
 	}
 	return self.state.GetAccount(f), nil
 }
+
 func (self *StateTransition) to() vm.Account {
 	if self.msg == nil {
 		return nil
@@ -196,7 +211,6 @@ func (self *StateTransition) preCheck() (err error) {
 	}
 
 	// Make sure this transaction's nonce is correct
-	//if sender.Nonce() != msg.Nonce() {
 	if n := self.state.GetNonce(sender.Address()); n != msg.Nonce() {
 		return NonceError(msg.Nonce(), n)
 	}
@@ -212,18 +226,19 @@ func (self *StateTransition) preCheck() (err error) {
 	return nil
 }
 
-func (self *StateTransition) transitionDb() (ret []byte, err error) {
+// TransitionDb will move the state by applying the message against the given environment.
+func (self *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big.Int, err error) {
 	if err = self.preCheck(); err != nil {
 		return
 	}
 	msg := self.msg
 	sender, _ := self.from() // err checked in preCheck
 
-	homestead := params.IsHomestead(self.env.BlockNumber())
+	homestead := self.env.RuleSet().IsHomestead(self.env.BlockNumber())
 	contractCreation := MessageCreatesContract(msg)
 	// Pay intrinsic gas
 	if err = self.useGas(IntrinsicGas(self.data, contractCreation, homestead)); err != nil {
-		return nil, InvalidTxError(err)
+		return nil, nil, nil, InvalidTxError(err)
 	}
 
 	vmenv := self.env
@@ -248,7 +263,7 @@ func (self *StateTransition) transitionDb() (ret []byte, err error) {
 	}
 
 	if err != nil && IsValueTransferErr(err) {
-		return nil, InvalidTxError(err)
+		return nil, nil, nil, InvalidTxError(err)
 	}
 
 	// We aren't interested in errors here. Errors returned by the VM are non-consensus errors and therefor shouldn't bubble up
@@ -257,16 +272,13 @@ func (self *StateTransition) transitionDb() (ret []byte, err error) {
 		err = nil
 	}
 
-	if vm.Debug {
-		vm.StdErrFormat(vmenv.StructLogs())
-	}
+	requiredGas = new(big.Int).Set(self.gasUsed())
 
 	self.refundGas()
 	self.state.AddBalance(self.env.Coinbase(), new(big.Int).Mul(self.gasUsed(), self.gasPrice))
 
 	self.report.GasUsed = self.gasUsed()
-
-	return ret, err
+	return ret, requiredGas, self.gasUsed(), err
 }
 
 func (self *StateTransition) refundGas() {

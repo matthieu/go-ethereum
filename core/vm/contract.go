@@ -1,4 +1,4 @@
-// Copyright 2014 The go-ethereum Authors
+// Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -28,6 +28,7 @@ type ContractRef interface {
 	Address() common.Address
 	Value() *big.Int
 	SetCode([]byte)
+	ForEachStorage(callback func(key, value common.Hash) bool)
 }
 
 // Contract represents an ethereum contract in the state database. It contains
@@ -151,4 +152,10 @@ func (self *Contract) SetCode(code []byte) {
 func (self *Contract) SetCallCode(addr *common.Address, code []byte) {
 	self.Code = code
 	self.CodeAddr = addr
+}
+
+// EachStorage iterates the contract's storage and calls a method for every key
+// value pair.
+func (self *Contract) ForEachStorage(cb func(key, value common.Hash) bool) {
+	self.caller.ForEachStorage(cb)
 }

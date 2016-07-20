@@ -30,31 +30,59 @@ type blockGetter interface {
 	GetBlock(common.Hash) *types.Block
 }
 
+// GetHashFn returns a function for which the VM env can query block hashes through
+// up to the limit defined by the Yellow Paper and uses the given block chain
+// to query for information.
+func GetHashFn(ref common.Hash, chain blockGetter) func(n uint64) common.Hash {
+	return func(n uint64) common.Hash {
+		for block := chain.GetBlock(ref); block != nil; block = chain.GetBlock(block.ParentHash()) {
+			if block.NumberU64() == n {
+				return block.Hash()
+			}
+		}
+
+		return common.Hash{}
+	}
+}
+
 type VMEnv struct {
-	state  *state.StateDB
-	header *types.Header
-	msg    Message
-	depth  int
-	chain  blockGetter
-	typ    vm.Type
-	// structured logging
-	logs []vm.StructLog
+	chainConfig *ChainConfig   // Chain configuration
+	state       *state.StateDB // State to use for executing
+	evm         *vm.EVM        // The Ethereum Virtual Machine
+	depth       int            // Current execution depth
+	msg         Message        // Message appliod
+
+	header    *types.Header            // Header information
+	chain     blockGetter              // Blockchain handle
+	logs      []vm.StructLog           // Logs for the custom structured logger
+	getHashFn func(uint64) common.Hash // getHashFn callback is used to retrieve block hashes
 
 	internalTxs []*types.InternalTransaction
 	hash        common.Hash // transaction/message hash originating this env
 }
 
-func NewEnv(state *state.StateDB, chain blockGetter, msg Message, header *types.Header, hash common.Hash) *VMEnv {
-	return &VMEnv{
-		chain:  chain,
-		state:  state,
-		header: header,
-		msg:    msg,
-		typ:    vm.StdVmTy,
-		hash:   hash,
+func NewEnv(state *state.StateDB, chainConfig *ChainConfig, chain blockGetter, msg Message, header *types.Header, hash common.Hash, cfg vm.Config) *VMEnv {
+	env := &VMEnv{
+		chainConfig: chainConfig,
+		chain:       chain,
+		state:       state,
+		header:      header,
+		msg:         msg,
+		getHashFn:   GetHashFn(header.ParentHash, chain),
+		hash:        hash,
 	}
+
+	// if no log collector is present set self as the collector
+	if cfg.Logger.Collector == nil {
+		cfg.Logger.Collector = env
+	}
+
+	env.evm = vm.New(env, cfg)
+	return env
 }
 
+func (self *VMEnv) RuleSet() vm.RuleSet          { return self.chainConfig }
+func (self *VMEnv) Vm() vm.Vm                    { return self.evm }
 func (self *VMEnv) Origin() common.Address       { f, _ := self.msg.From(); return f }
 func (self *VMEnv) OriginationHash() common.Hash { return self.hash }
 func (self *VMEnv) BlockNumber() *big.Int        { return self.header.Number }
@@ -66,16 +94,8 @@ func (self *VMEnv) Value() *big.Int              { return self.msg.Value() }
 func (self *VMEnv) Db() vm.Database              { return self.state }
 func (self *VMEnv) Depth() int                   { return self.depth }
 func (self *VMEnv) SetDepth(i int)               { self.depth = i }
-func (self *VMEnv) VmType() vm.Type              { return self.typ }
-func (self *VMEnv) SetVmType(t vm.Type)          { self.typ = t }
 func (self *VMEnv) GetHash(n uint64) common.Hash {
-	for block := self.chain.GetBlock(self.header.ParentHash); block != nil; block = self.chain.GetBlock(block.ParentHash()) {
-		if block.NumberU64() == n {
-			return block.Hash()
-		}
-	}
-
-	return common.Hash{}
+	return self.getHashFn(n)
 }
 
 func (self *VMEnv) AddLog(log *vm.Log) {

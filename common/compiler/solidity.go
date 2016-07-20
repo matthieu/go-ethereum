@@ -149,7 +149,6 @@ func (sol *Solidity) Compile(source string) (map[string]*Contract, error) {
 	compilerOptions := strings.Join(params, " ")
 
 	cmd := exec.Command(sol.solcPath, params...)
-	cmd.Dir = wd
 	cmd.Stdin = strings.NewReader(source)
 	cmd.Stderr = stderr
 
@@ -157,7 +156,7 @@ func (sol *Solidity) Compile(source string) (map[string]*Contract, error) {
 		return nil, fmt.Errorf("solc: %v\n%s", err, string(stderr.Bytes()))
 	}
 	// Sanity check that something was actually built
-	matches, _ := filepath.Glob(wd + "/*\\.bin*")
+	matches, _ := filepath.Glob(filepath.Join(wd, "*.bin*"))
 	if len(matches) < 1 {
 		return nil, fmt.Errorf("solc: no build results found")
 	}
@@ -220,7 +219,7 @@ func SaveInfo(info *ContractInfo, filename string) (contenthash common.Hash, err
 	if err != nil {
 		return
 	}
-	contenthash = common.BytesToHash(crypto.Sha3(infojson))
+	contenthash = common.BytesToHash(crypto.Keccak256(infojson))
 	err = ioutil.WriteFile(filename, infojson, 0600)
 	return
 }

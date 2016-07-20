@@ -1,3 +1,19 @@
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 package core
 
 import (
@@ -27,12 +43,21 @@ type TxExecReport struct {
 	GasRefund   *big.Int
 }
 
+// StateProcessor is a basic Processor, which takes care of transitioning
+// state from one point to another.
+//
+// StateProcessor implements Processor.
 type StateProcessor struct {
-	bc blockGetter
+	config *ChainConfig
+	bc     blockGetter
 }
 
-func NewStateProcessor(bc blockGetter) *StateProcessor {
-	return &StateProcessor{bc}
+// NewStateProcessor initialises a new StateProcessor.
+func NewStateProcessor(config *ChainConfig, bc blockGetter) *StateProcessor {
+	return &StateProcessor{
+		config: config,
+		bc:     bc,
+	}
 }
 
 // Process processes the state changes according to the Ethereum rules by running
@@ -42,7 +67,7 @@ func NewStateProcessor(bc blockGetter) *StateProcessor {
 // Process returns the receipts and logs accumulated during the process and
 // returns the amount of gas that was used in the process. If any of the
 // transactions failed to execute due to insufficient gas it will return an error.
-func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (types.Receipts, vm.Logs, []*TxExecReport, *big.Int, error) {
+func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, vm.Logs, *big.Int, []*TxExecReport, error) {
 	var (
 		receipts     types.Receipts
 		totalUsedGas = big.NewInt(0)
@@ -52,12 +77,16 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 		allReports   []*TxExecReport
 		gp           = new(GasPool).AddGas(block.GasLimit())
 	)
-
+	// Mutate the the block and state according to any hard-fork specs
+	if p.config.DAOForkSupport && p.config.DAOForkBlock != nil && p.config.DAOForkBlock.Cmp(block.Number()) == 0 {
+		ApplyDAOHardFork(statedb)
+	}
+	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.StartRecord(tx.Hash(), block.Hash(), i)
-		receipt, logs, report, err := ApplyTransaction(p.bc, gp, statedb, header, tx, totalUsedGas)
+		receipt, logs, _, report, err := ApplyTransaction(p.config, p.bc, gp, statedb, header, tx, totalUsedGas, cfg)
 		if err != nil {
-			return nil, nil, nil, totalUsedGas, err
+			return nil, nil, totalUsedGas, nil, err
 		}
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, logs...)
@@ -65,21 +94,21 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB) (ty
 	}
 	AccumulateRewards(statedb, header, block.Uncles())
 
-	return receipts, allLogs, allReports, totalUsedGas, err
+	return receipts, allLogs, totalUsedGas, allReports, err
 }
 
-// ApplyTransaction attemps to apply a transaction to the given state database
+// ApplyTransaction attempts to apply a transaction to the given state database
 // and uses the input parameters for its environment.
 //
 // ApplyTransactions returns the generated receipts and vm logs during the
 // execution of the state transition phase.
-func ApplyTransaction(bc blockGetter, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int) (*types.Receipt, vm.Logs, *TxExecReport, error) {
+func ApplyTransaction(config *ChainConfig, bc blockGetter, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int, cfg vm.Config) (*types.Receipt, vm.Logs, *big.Int, *TxExecReport, error) {
 
 	report := &TxExecReport{Transaction: tx}
-	env := NewEnv(statedb, bc, tx, header, tx.Hash())
-	_, err := ApplyMessage(env, tx, gp, report)
+	env := NewEnv(statedb, config, bc, tx, header, tx.Hash(), cfg)
+	_, gas, err := ApplyMessage(env, tx, gp, report)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	// Update the state with pending changes
@@ -100,7 +129,7 @@ func ApplyTransaction(bc blockGetter, gp *GasPool, statedb *state.StateDB, heade
 	report.Internals = env.InternalTransactions()
 	report.Receipt = receipt
 
-	return receipt, logs, report, err
+	return receipt, logs, gas, report, err
 }
 
 // AccumulateRewards credits the coinbase of the given block with the

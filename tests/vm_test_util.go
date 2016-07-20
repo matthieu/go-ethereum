@@ -1,4 +1,4 @@
-// Copyright 2014 The go-ethereum Authors
+// Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -29,6 +29,7 @@ import (
 	"github.com/matthieu/go-ethereum/core/vm"
 	"github.com/matthieu/go-ethereum/ethdb"
 	"github.com/matthieu/go-ethereum/logger/glog"
+	"github.com/matthieu/go-ethereum/params"
 )
 
 func RunVmTestWithReader(r io.Reader, skipTests []string) error {
@@ -67,11 +68,6 @@ func BenchVmTest(p string, conf bconf, b *testing.B) error {
 		return fmt.Errorf("test not found: %s", conf.name)
 	}
 
-	pJit := vm.EnableJit
-	vm.EnableJit = conf.jit
-	pForceJit := vm.ForceJit
-	vm.ForceJit = conf.precomp
-
 	env := make(map[string]string)
 	env["currentCoinbase"] = test.Env.CurrentCoinbase
 	env["currentDifficulty"] = test.Env.CurrentDifficulty
@@ -98,9 +94,6 @@ func BenchVmTest(p string, conf bconf, b *testing.B) error {
 	for i := 0; i < b.N; i++ {
 		benchVmTest(test, env, b)
 	}
-
-	vm.EnableJit = pJit
-	vm.ForceJit = pForceJit
 
 	return nil
 }
@@ -248,7 +241,7 @@ func RunVm(state *state.StateDB, env, exec map[string]string) ([]byte, vm.Logs, 
 
 	caller := state.GetOrNewStateObject(from)
 
-	vmenv := NewEnvFromMap(state, env, exec)
+	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env, exec)
 	vmenv.vmTest = true
 	vmenv.skipTransfer = true
 	vmenv.initial = true

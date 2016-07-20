@@ -1,4 +1,4 @@
-// Copyright 2014 The go-ethereum Authors
+// Copyright 2015 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"os"
 
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/core"
@@ -28,7 +29,21 @@ import (
 	"github.com/matthieu/go-ethereum/core/vm"
 	"github.com/matthieu/go-ethereum/crypto"
 	"github.com/matthieu/go-ethereum/ethdb"
+	"github.com/matthieu/go-ethereum/logger/glog"
 )
+
+var (
+	ForceJit  bool
+	EnableJit bool
+)
+
+func init() {
+	glog.SetV(0)
+	if os.Getenv("JITVM") == "true" {
+		ForceJit = true
+		EnableJit = true
+	}
+}
 
 func checkLogs(tlog []Log, logs vm.Logs) error {
 
@@ -124,7 +139,18 @@ type VmTest struct {
 	PostStateRoot string
 }
 
+type RuleSet struct {
+	HomesteadBlock *big.Int
+	DAOForkBlock   *big.Int
+	DAOForkSupport bool
+}
+
+func (r RuleSet) IsHomestead(n *big.Int) bool {
+	return n.Cmp(r.HomesteadBlock) >= 0
+}
+
 type Env struct {
+	ruleSet      RuleSet
 	depth        int
 	state        *state.StateDB
 	skipTransfer bool
@@ -143,12 +169,16 @@ type Env struct {
 	logs []vm.StructLog
 
 	vmTest bool
+
+	evm *vm.EVM
 }
 
-func NewEnv(state *state.StateDB) *Env {
-	return &Env{
-		state: state,
+func NewEnv(ruleSet RuleSet, state *state.StateDB) *Env {
+	env := &Env{
+		ruleSet: ruleSet,
+		state:   state,
 	}
+	return env
 }
 
 func (self *Env) StructLogs() []vm.StructLog {
@@ -159,8 +189,8 @@ func (self *Env) AddStructLog(log vm.StructLog) {
 	self.logs = append(self.logs, log)
 }
 
-func NewEnvFromMap(state *state.StateDB, envValues map[string]string, exeValues map[string]string) *Env {
-	env := NewEnv(state)
+func NewEnvFromMap(ruleSet RuleSet, state *state.StateDB, envValues map[string]string, exeValues map[string]string) *Env {
+	env := NewEnv(ruleSet, state)
 
 	env.origin = common.HexToAddress(exeValues["caller"])
 	env.parent = common.HexToHash(envValues["previousHash"])
@@ -171,9 +201,16 @@ func NewEnvFromMap(state *state.StateDB, envValues map[string]string, exeValues 
 	env.gasLimit = common.Big(envValues["currentGasLimit"])
 	env.Gas = new(big.Int)
 
+	env.evm = vm.New(env, vm.Config{
+		EnableJit: EnableJit,
+		ForceJit:  ForceJit,
+	})
+
 	return env
 }
 
+func (self *Env) RuleSet() vm.RuleSet      { return self.ruleSet }
+func (self *Env) Vm() vm.Vm                { return self.evm }
 func (self *Env) Origin() common.Address   { return self.origin }
 func (self *Env) BlockNumber() *big.Int    { return self.number }
 func (self *Env) Coinbase() common.Address { return self.coinbase }
@@ -183,7 +220,7 @@ func (self *Env) Db() vm.Database          { return self.state }
 func (self *Env) GasLimit() *big.Int       { return self.gasLimit }
 func (self *Env) VmType() vm.Type          { return vm.StdVmTy }
 func (self *Env) GetHash(n uint64) common.Hash {
-	return common.BytesToHash(crypto.Sha3([]byte(big.NewInt(int64(n)).String())))
+	return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(n)).String())))
 }
 func (self *Env) AddLog(log *vm.Log) {
 	self.state.AddLog(log)

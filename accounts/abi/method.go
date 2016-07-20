@@ -62,7 +62,7 @@ func (m Method) pack(method Method, args ...interface{}) ([]byte, error) {
 			// calculate the offset
 			offset := len(method.Inputs)*32 + len(variableInput)
 			// set the offset
-			ret = append(ret, packNum(reflect.ValueOf(offset), UintTy)...)
+			ret = append(ret, packNum(reflect.ValueOf(offset))...)
 			// Append the packed output to the variable input. The variable input
 			// will be appended at the end of the input.
 			variableInput = append(variableInput, packed...)
@@ -114,5 +114,5 @@ func (m Method) String() string {
 }
 
 func (m Method) Id() []byte {
-	return crypto.Sha3([]byte(m.Sig()))[:4]
+	return crypto.Keccak256([]byte(m.Sig()))[:4]
 }

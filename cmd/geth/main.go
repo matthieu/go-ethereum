@@ -18,9 +18,9 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
-	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -28,68 +28,76 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codegangsta/cli"
-	"github.com/ethereum/ethash"
-	"github.com/matthieu/go-ethereum/accounts"
+	"github.com/matthieu/ethash"
 	"github.com/matthieu/go-ethereum/cmd/utils"
 	"github.com/matthieu/go-ethereum/common"
+	"github.com/matthieu/go-ethereum/console"
 	"github.com/matthieu/go-ethereum/core"
-	"github.com/matthieu/go-ethereum/core/types"
 	"github.com/matthieu/go-ethereum/eth"
 	"github.com/matthieu/go-ethereum/ethdb"
+	"github.com/matthieu/go-ethereum/internal/debug"
 	"github.com/matthieu/go-ethereum/logger"
 	"github.com/matthieu/go-ethereum/logger/glog"
 	"github.com/matthieu/go-ethereum/metrics"
+	"github.com/matthieu/go-ethereum/node"
 	"github.com/matthieu/go-ethereum/params"
+	"github.com/matthieu/go-ethereum/release"
 	"github.com/matthieu/go-ethereum/rlp"
-	"github.com/matthieu/go-ethereum/rpc/codec"
-	"github.com/matthieu/go-ethereum/rpc/comms"
+	"gopkg.in/urfave/cli.v1"
 )
 
 const (
-	ClientIdentifier = "Geth"
-	Version          = "1.3.5"
-	VersionMajor     = 1
-	VersionMinor     = 3
-	VersionPatch     = 5
+	clientIdentifier = "Geth"   // Client identifier to advertise over the network
+	versionMajor     = 1        // Major version component of the current release
+	versionMinor     = 4        // Minor version component of the current release
+	versionPatch     = 10       // Patch version component of the current release
+	versionMeta      = "stable" // Version metadata to append to the version string
+
+	versionOracle = "0xfa7b9770ca4cb04296cac84f37736d4041251cdf" // Ethereum address of the Geth release oracle
 )
 
 var (
-	gitCommit       string // set via linker flagg
-	nodeNameVersion string
-	app             *cli.App
+	gitCommit string         // Git SHA1 commit hash of the release (set via linker flags)
+	verString string         // Combined textual representation of all the version components
+	relConfig release.Config // Structured version information and release oracle config
+	app       *cli.App
 )
 
 func init() {
-	if gitCommit == "" {
-		nodeNameVersion = Version
-	} else {
-		nodeNameVersion = Version + "-" + gitCommit[:8]
+	// Construct the textual version string from the individual components
+	verString = fmt.Sprintf("%d.%d.%d", versionMajor, versionMinor, versionPatch)
+	if versionMeta != "" {
+		verString += "-" + versionMeta
 	}
+	if gitCommit != "" {
+		verString += "-" + gitCommit[:8]
+	}
+	// Construct the version release oracle configuration
+	relConfig.Oracle = common.HexToAddress(versionOracle)
 
-	app = utils.NewApp(Version, "the go-ethereum command line interface")
-	app.Action = run
+	relConfig.Major = uint32(versionMajor)
+	relConfig.Minor = uint32(versionMinor)
+	relConfig.Patch = uint32(versionPatch)
+
+	commit, _ := hex.DecodeString(gitCommit)
+	copy(relConfig.Commit[:], commit)
+
+	// Initialize the CLI app and start Geth
+	app = utils.NewApp(verString, "the go-ethereum command line interface")
+	app.Action = geth
 	app.HideVersion = true // we have a command to print the version
 	app.Commands = []cli.Command{
-		{
-			Action: blockRecovery,
-			Name:   "recover",
-			Usage:  "Attempts to recover a corrupted database by setting a new block by number or hash",
-			Description: `
-The recover commands will attempt to read out the last
-block based on that.
-
-recover #number recovers by number
-recover <hex> recovers by hash
-`,
-		},
-		blocktestCommand,
 		importCommand,
 		exportCommand,
 		upgradedbCommand,
 		removedbCommand,
 		dumpCommand,
 		monitorCommand,
+		accountCommand,
+		walletCommand,
+		consoleCommand,
+		attachCommand,
+		javascriptCommand,
 		{
 			Action: makedag,
 			Name:   "makedag",
@@ -125,182 +133,30 @@ Runs quick benchmark on first GPU found.
 The output of this command is supposed to be machine-readable.
 `,
 		},
-
 		{
-			Name:  "wallet",
-			Usage: "ethereum presale wallet",
-			Subcommands: []cli.Command{
-				{
-					Action: importWallet,
-					Name:   "import",
-					Usage:  "import ethereum presale wallet",
-				},
-			},
+			Action: initGenesis,
+			Name:   "init",
+			Usage:  "bootstraps and initialises a new genesis block (JSON)",
 			Description: `
-
-    get wallet import /path/to/my/presale.wallet
-
-will prompt for your password and imports your ether presale account.
-It can be used non-interactively with the --password option taking a
-passwordfile as argument containing the wallet password in plaintext.
-
-`},
-		{
-			Action: accountList,
-			Name:   "account",
-			Usage:  "manage accounts",
-			Description: `
-
-Manage accounts lets you create new accounts, list all existing accounts,
-import a private key into a new account.
-
-'            help' shows a list of subcommands or help for one subcommand.
-
-It supports interactive mode, when you are prompted for password as well as
-non-interactive mode where passwords are supplied via a given password file.
-Non-interactive mode is only meant for scripted use on test networks or known
-safe environments.
-
-Make sure you remember the password you gave when creating a new account (with
-either new or import). Without it you are not able to unlock your account.
-
-Note that exporting your key in unencrypted format is NOT supported.
-
-Keys are stored under <DATADIR>/keys.
-It is safe to transfer the entire directory or the individual keys therein
-between ethereum nodes by simply copying.
-Make sure you backup your keys regularly.
-
-In order to use your account to send transactions, you need to unlock them using
-the '--unlock' option. The argument is a space separated list of addresses or
-indexes. If used non-interactively with a passwordfile, the file should contain
-the respective passwords one per line. If you unlock n accounts and the password
-file contains less than n entries, then the last password is meant to apply to
-all remaining accounts.
-
-And finally. DO NOT FORGET YOUR PASSWORD.
-`,
-			Subcommands: []cli.Command{
-				{
-					Action: accountList,
-					Name:   "list",
-					Usage:  "print account addresses",
-				},
-				{
-					Action: accountCreate,
-					Name:   "new",
-					Usage:  "create a new account",
-					Description: `
-
-    ethereum account new
-
-Creates a new account. Prints the address.
-
-The account is saved in encrypted format, you are prompted for a passphrase.
-
-You must remember this passphrase to unlock your account in the future.
-
-For non-interactive use the passphrase can be specified with the --password flag:
-
-    ethereum --password <passwordfile> account new
-
-Note, this is meant to be used for testing only, it is a bad idea to save your
-password to file or expose in any other way.
-					`,
-				},
-				{
-					Action: accountUpdate,
-					Name:   "update",
-					Usage:  "update an existing account",
-					Description: `
-
-    ethereum account update <address>
-
-Update an existing account.
-
-The account is saved in the newest version in encrypted format, you are prompted
-for a passphrase to unlock the account and another to save the updated file.
-
-This same command can therefore be used to migrate an account of a deprecated
-format to the newest format or change the password for an account.
-
-For non-interactive use the passphrase can be specified with the --password flag:
-
-    ethereum --password <passwordfile> account update <address>
-
-Since only one password can be given, only format update can be performed,
-changing your password is only possible interactively.
-
-Note that account update has the a side effect that the order of your accounts
-changes.
-					`,
-				},
-				{
-					Action: accountImport,
-					Name:   "import",
-					Usage:  "import a private key into a new account",
-					Description: `
-
-    ethereum account import <keyfile>
-
-Imports an unencrypted private key from <keyfile> and creates a new account.
-Prints the address.
-
-The keyfile is assumed to contain an unencrypted private key in hexadecimal format.
-
-The account is saved in encrypted format, you are prompted for a passphrase.
-
-You must remember this passphrase to unlock your account in the future.
-
-For non-interactive use the passphrase can be specified with the -password flag:
-
-    ethereum --password <passwordfile> account import <keyfile>
-
-Note:
-As you can directly copy your encrypted accounts to another ethereum instance,
-this import mechanism is not needed when you transfer an account between
-nodes.
-					`,
-				},
-			},
-		},
-		{
-			Action: console,
-			Name:   "console",
-			Usage:  `Geth Console: interactive JavaScript environment`,
-			Description: `
-The Geth console is an interactive shell for the JavaScript runtime environment
-which exposes a node admin interface as well as the Ðapp JavaScript API.
-See https://github.com/matthieu/go-ethereum/wiki/Javascipt-Console
-`},
-		{
-			Action: attach,
-			Name:   "attach",
-			Usage:  `Geth Console: interactive JavaScript environment (connect to node)`,
-			Description: `
-The Geth console is an interactive shell for the JavaScript runtime environment
-which exposes a node admin interface as well as the Ðapp JavaScript API.
-See https://github.com/matthieu/go-ethereum/wiki/Javascipt-Console.
-This command allows to open a console on a running geth node.
-`,
-		},
-		{
-			Action: execJSFiles,
-			Name:   "js",
-			Usage:  `executes the given JavaScript files in the Geth JavaScript VM`,
-			Description: `
+<<<<<<< HEAD
 The JavaScript VM exposes a node admin interface as well as the Ðapp
 JavaScript API. See https://github.com/matthieu/go-ethereum/wiki/Javascipt-Console
+=======
+The init command initialises a new genesis block and definition for the network.
+This is a destructive action and changes the network in which you will be
+participating.
+>>>>>>> 5f55d95aea433ef97c48ae927835d833772350de
 `,
 		},
 	}
+
 	app.Flags = []cli.Flag{
 		utils.IdentityFlag,
 		utils.UnlockedAccountFlag,
 		utils.PasswordFileFlag,
-		utils.GenesisFileFlag,
 		utils.BootnodesFlag,
 		utils.DataDirFlag,
+		utils.KeyStoreDirFlag,
 		utils.BlockchainVersionFlag,
 		utils.OlympicFlag,
 		utils.FastSyncFlag,
@@ -312,10 +168,13 @@ JavaScript API. See https://github.com/matthieu/go-ethereum/wiki/Javascipt-Conso
 		utils.MaxPendingPeersFlag,
 		utils.EtherbaseFlag,
 		utils.GasPriceFlag,
+		utils.SupportDAOFork,
+		utils.OpposeDAOFork,
 		utils.MinerThreadsFlag,
 		utils.MiningEnabledFlag,
 		utils.MiningGPUFlag,
 		utils.AutoDAGFlag,
+		utils.TargetGasLimitFlag,
 		utils.NATFlag,
 		utils.NatspecEnabledFlag,
 		utils.NoDiscoverFlag,
@@ -324,27 +183,27 @@ JavaScript API. See https://github.com/matthieu/go-ethereum/wiki/Javascipt-Conso
 		utils.RPCEnabledFlag,
 		utils.RPCListenAddrFlag,
 		utils.RPCPortFlag,
-		utils.RpcApiFlag,
+		utils.RPCApiFlag,
+		utils.WSEnabledFlag,
+		utils.WSListenAddrFlag,
+		utils.WSPortFlag,
+		utils.WSApiFlag,
+		utils.WSAllowedOriginsFlag,
 		utils.IPCDisabledFlag,
 		utils.IPCApiFlag,
 		utils.IPCPathFlag,
 		utils.ExecFlag,
+		utils.PreloadJSFlag,
 		utils.WhisperEnabledFlag,
 		utils.DevModeFlag,
 		utils.TestNetFlag,
-		utils.VMDebugFlag,
 		utils.VMForceJitFlag,
 		utils.VMJitCacheFlag,
 		utils.VMEnableJitFlag,
 		utils.NetworkIdFlag,
 		utils.RPCCORSDomainFlag,
-		utils.VerbosityFlag,
-		utils.BacktraceAtFlag,
-		utils.LogVModuleFlag,
-		utils.LogFileFlag,
-		utils.PProfEanbledFlag,
-		utils.PProfPortFlag,
 		utils.MetricsEnabledFlag,
+		utils.FakePoWFlag,
 		utils.SolcPathFlag,
 		utils.GpoMinGasPriceFlag,
 		utils.GpoMaxGasPriceFlag,
@@ -354,34 +213,39 @@ JavaScript API. See https://github.com/matthieu/go-ethereum/wiki/Javascipt-Conso
 		utils.GpobaseCorrectionFactorFlag,
 		utils.ExtraDataFlag,
 	}
+	app.Flags = append(app.Flags, debug.Flags...)
+
 	app.Before = func(ctx *cli.Context) error {
-		utils.SetupLogger(ctx)
-		utils.SetupNetwork(ctx)
-		utils.SetupVM(ctx)
-		if ctx.GlobalBool(utils.PProfEanbledFlag.Name) {
-			utils.StartPProf(ctx)
+		runtime.GOMAXPROCS(runtime.NumCPU())
+		if err := debug.Setup(ctx); err != nil {
+			return err
 		}
+		// Start system runtime metrics collection
+		go metrics.CollectProcessMetrics(3 * time.Second)
+
+		// This should be the only place where reporting is enabled
+		// because it is not intended to run while testing.
+		// In addition to this check, bad block reports are sent only
+		// for chains with the main network genesis block and network id 1.
+		eth.EnableBadBlockReporting = true
+
+		utils.SetupNetwork(ctx)
 		return nil
 	}
-	// Start system runtime metrics collection
-	go metrics.CollectProcessMetrics(3 * time.Second)
+
+	app.After = func(ctx *cli.Context) error {
+		logger.Flush()
+		debug.Exit()
+		console.Stdin.Close() // Resets terminal mode.
+		return nil
+	}
 }
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	defer logger.Flush()
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-}
-
-// makeExtra resolves extradata for the miner from a flag or returns a default.
-func makeExtra(ctx *cli.Context) []byte {
-	if ctx.GlobalIsSet(utils.ExtraDataFlag.Name) {
-		return []byte(ctx.GlobalString(utils.ExtraDataFlag.Name))
-	}
-	return makeDefaultExtra()
 }
 
 func makeDefaultExtra() []byte {
@@ -390,7 +254,7 @@ func makeDefaultExtra() []byte {
 		Name      string
 		GoVersion string
 		Os        string
-	}{uint(VersionMajor<<16 | VersionMinor<<8 | VersionPatch), ClientIdentifier, runtime.Version(), runtime.GOOS}
+	}{uint(versionMajor<<16 | versionMinor<<8 | versionPatch), clientIdentifier, runtime.Version(), runtime.GOOS}
 	extra, err := rlp.EncodeToBytes(clientInfo)
 	if err != nil {
 		glog.V(logger.Warn).Infoln("error setting canonical miner information:", err)
@@ -404,309 +268,73 @@ func makeDefaultExtra() []byte {
 	return extra
 }
 
-func run(ctx *cli.Context) {
-	cfg := utils.MakeEthConfig(ClientIdentifier, nodeNameVersion, ctx)
-	cfg.ExtraData = makeExtra(ctx)
+// geth is the main entry point into the system if no special subcommand is ran.
+// It creates a default node based on the command line arguments and runs it in
+// blocking mode, waiting for it to be shut down.
+func geth(ctx *cli.Context) error {
+	node := utils.MakeSystemNode(clientIdentifier, verString, relConfig, makeDefaultExtra(), ctx)
+	startNode(ctx, node)
+	node.Wait()
 
-	ethereum, err := eth.New(cfg)
-	if err != nil {
-		utils.Fatalf("%v", err)
-	}
-
-	startEth(ctx, ethereum)
-	// this blocks the thread
-	ethereum.WaitForShutdown()
+	return nil
 }
 
-func attach(ctx *cli.Context) {
-	var client comms.EthereumClient
-	var err error
-	if ctx.Args().Present() {
-		client, err = comms.ClientFromEndpoint(ctx.Args().First(), codec.JSON)
-	} else {
-		cfg := comms.IpcConfig{
-			Endpoint: utils.IpcSocketPath(ctx),
-		}
-		client, err = comms.NewIpcClient(cfg, codec.JSON)
+// initGenesis will initialise the given JSON format genesis file and writes it as
+// the zero'd block (i.e. genesis) or will fail hard if it can't succeed.
+func initGenesis(ctx *cli.Context) error {
+	genesisPath := ctx.Args().First()
+	if len(genesisPath) == 0 {
+		utils.Fatalf("must supply path to genesis JSON file")
 	}
 
+	chainDb, err := ethdb.NewLDBDatabase(filepath.Join(utils.MustMakeDataDir(ctx), "chaindata"), 0, 0)
 	if err != nil {
-		utils.Fatalf("Unable to attach to geth node - %v", err)
+		utils.Fatalf("could not open database: %v", err)
 	}
 
-	repl := newLightweightJSRE(
-		ctx.GlobalString(utils.JSpathFlag.Name),
-		client,
-		ctx.GlobalString(utils.DataDirFlag.Name),
-		true,
-	)
-
-	if ctx.GlobalString(utils.ExecFlag.Name) != "" {
-		repl.batch(ctx.GlobalString(utils.ExecFlag.Name))
-	} else {
-		repl.welcome()
-		repl.interactive()
+	genesisFile, err := os.Open(genesisPath)
+	if err != nil {
+		utils.Fatalf("failed to read genesis file: %v", err)
 	}
+
+	block, err := core.WriteGenesisBlock(chainDb, genesisFile)
+	if err != nil {
+		utils.Fatalf("failed to write genesis block: %v", err)
+	}
+	glog.V(logger.Info).Infof("successfully wrote genesis block and/or chain rule set: %x", block.Hash())
+	return nil
 }
 
-func console(ctx *cli.Context) {
-	cfg := utils.MakeEthConfig(ClientIdentifier, nodeNameVersion, ctx)
-	cfg.ExtraData = makeExtra(ctx)
+// startNode boots up the system node and all registered protocols, after which
+// it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
+// miner.
+func startNode(ctx *cli.Context, stack *node.Node) {
+	// Start up the node itself
+	utils.StartNode(stack)
 
-	ethereum, err := eth.New(cfg)
-	if err != nil {
-		utils.Fatalf("%v", err)
+	// Unlock any account specifically requested
+	var ethereum *eth.Ethereum
+	if err := stack.Service(&ethereum); err != nil {
+		utils.Fatalf("ethereum service not running: %v", err)
 	}
+	accman := ethereum.AccountManager()
+	passwords := utils.MakePasswordList(ctx)
 
-	client := comms.NewInProcClient(codec.JSON)
-
-	startEth(ctx, ethereum)
-	repl := newJSRE(
-		ethereum,
-		ctx.GlobalString(utils.JSpathFlag.Name),
-		ctx.GlobalString(utils.RPCCORSDomainFlag.Name),
-		client,
-		true,
-		nil,
-	)
-
-	if ctx.GlobalString(utils.ExecFlag.Name) != "" {
-		repl.batch(ctx.GlobalString(utils.ExecFlag.Name))
-	} else {
-		repl.welcome()
-		repl.interactive()
-	}
-
-	ethereum.Stop()
-	ethereum.WaitForShutdown()
-}
-
-func execJSFiles(ctx *cli.Context) {
-	cfg := utils.MakeEthConfig(ClientIdentifier, nodeNameVersion, ctx)
-	ethereum, err := eth.New(cfg)
-	if err != nil {
-		utils.Fatalf("%v", err)
-	}
-
-	client := comms.NewInProcClient(codec.JSON)
-	startEth(ctx, ethereum)
-	repl := newJSRE(
-		ethereum,
-		ctx.GlobalString(utils.JSpathFlag.Name),
-		ctx.GlobalString(utils.RPCCORSDomainFlag.Name),
-		client,
-		false,
-		nil,
-	)
-	for _, file := range ctx.Args() {
-		repl.exec(file)
-	}
-
-	ethereum.Stop()
-	ethereum.WaitForShutdown()
-}
-
-func unlockAccount(ctx *cli.Context, am *accounts.Manager, addr string, i int, inputpassphrases []string) (addrHex, auth string, passphrases []string) {
-	var err error
-	passphrases = inputpassphrases
-	addrHex, err = utils.ParamToAddress(addr, am)
-	if err == nil {
-		// Attempt to unlock the account 3 times
-		attempts := 3
-		for tries := 0; tries < attempts; tries++ {
-			msg := fmt.Sprintf("Unlocking account %s | Attempt %d/%d", addr, tries+1, attempts)
-			auth, passphrases = getPassPhrase(ctx, msg, false, i, passphrases)
-			err = am.Unlock(common.HexToAddress(addrHex), auth)
-			if err == nil || passphrases != nil {
-				break
-			}
-		}
-	}
-
-	if err != nil {
-		utils.Fatalf("Unlock account '%s' (%v) failed: %v", addr, addrHex, err)
-	}
-	fmt.Printf("Account '%s' (%v) unlocked.\n", addr, addrHex)
-	return
-}
-
-func blockRecovery(ctx *cli.Context) {
-	if len(ctx.Args()) < 1 {
-		glog.Fatal("recover requires block number or hash")
-	}
-	arg := ctx.Args().First()
-
-	cfg := utils.MakeEthConfig(ClientIdentifier, nodeNameVersion, ctx)
-	blockDb, err := ethdb.NewLDBDatabase(filepath.Join(cfg.DataDir, "blockchain"), cfg.DatabaseCache)
-	if err != nil {
-		glog.Fatalln("could not open db:", err)
-	}
-
-	var block *types.Block
-	if arg[0] == '#' {
-		block = core.GetBlock(blockDb, core.GetCanonicalHash(blockDb, common.String2Big(arg[1:]).Uint64()))
-	} else {
-		block = core.GetBlock(blockDb, common.HexToHash(arg))
-	}
-
-	if block == nil {
-		glog.Fatalln("block not found. Recovery failed")
-	}
-
-	if err = core.WriteHeadBlockHash(blockDb, block.Hash()); err != nil {
-		glog.Fatalln("block write err", err)
-	}
-	glog.Infof("Recovery succesful. New HEAD %x\n", block.Hash())
-}
-
-func startEth(ctx *cli.Context, eth *eth.Ethereum) {
-	// Start Ethereum itself
-	utils.StartEthereum(eth)
-
-	am := eth.AccountManager()
-	account := ctx.GlobalString(utils.UnlockedAccountFlag.Name)
-	accounts := strings.Split(account, " ")
-	var passphrases []string
+	accounts := strings.Split(ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")
 	for i, account := range accounts {
-		if len(account) > 0 {
-			if account == "primary" {
-				utils.Fatalf("the 'primary' keyword is deprecated. You can use integer indexes, but the indexes are not permanent, they can change if you add external keys, export your keys or copy your keystore to another node.")
-			}
-			_, _, passphrases = unlockAccount(ctx, am, account, i, passphrases)
+		if trimmed := strings.TrimSpace(account); trimmed != "" {
+			unlockAccount(ctx, accman, trimmed, i, passwords)
 		}
 	}
-	// Start auxiliary services if enabled.
-	if !ctx.GlobalBool(utils.IPCDisabledFlag.Name) {
-		if err := utils.StartIPC(eth, ctx); err != nil {
-			utils.Fatalf("Error string IPC: %v", err)
-		}
-	}
-	if ctx.GlobalBool(utils.RPCEnabledFlag.Name) {
-		if err := utils.StartRPC(eth, ctx); err != nil {
-			utils.Fatalf("Error starting RPC: %v", err)
-		}
-	}
+	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
-		err := eth.StartMining(
-			ctx.GlobalInt(utils.MinerThreadsFlag.Name),
-			ctx.GlobalString(utils.MiningGPUFlag.Name))
-		if err != nil {
-			utils.Fatalf("%v", err)
+		if err := ethereum.StartMining(ctx.GlobalInt(utils.MinerThreadsFlag.Name), ctx.GlobalString(utils.MiningGPUFlag.Name)); err != nil {
+			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}
 }
 
-func accountList(ctx *cli.Context) {
-	am := utils.MakeAccountManager(ctx)
-	accts, err := am.Accounts()
-	if err != nil {
-		utils.Fatalf("Could not list accounts: %v", err)
-	}
-	for i, acct := range accts {
-		fmt.Printf("Account #%d: %x\n", i, acct)
-	}
-}
-
-func getPassPhrase(ctx *cli.Context, desc string, confirmation bool, i int, inputpassphrases []string) (passphrase string, passphrases []string) {
-	passfile := ctx.GlobalString(utils.PasswordFileFlag.Name)
-	if len(passfile) == 0 {
-		fmt.Println(desc)
-		auth, err := utils.PromptPassword("Passphrase: ", true)
-		if err != nil {
-			utils.Fatalf("%v", err)
-		}
-		if confirmation {
-			confirm, err := utils.PromptPassword("Repeat Passphrase: ", false)
-			if err != nil {
-				utils.Fatalf("%v", err)
-			}
-			if auth != confirm {
-				utils.Fatalf("Passphrases did not match.")
-			}
-		}
-		passphrase = auth
-
-	} else {
-		passphrases = inputpassphrases
-		if passphrases == nil {
-			passbytes, err := ioutil.ReadFile(passfile)
-			if err != nil {
-				utils.Fatalf("Unable to read password file '%s': %v", passfile, err)
-			}
-			// this is backwards compatible if the same password unlocks several accounts
-			// it also has the consequence that trailing newlines will not count as part
-			// of the password, so --password <(echo -n 'pass') will now work without -n
-			passphrases = strings.Split(string(passbytes), "\n")
-		}
-		if i >= len(passphrases) {
-			passphrase = passphrases[len(passphrases)-1]
-		} else {
-			passphrase = passphrases[i]
-		}
-	}
-	return
-}
-
-func accountCreate(ctx *cli.Context) {
-	am := utils.MakeAccountManager(ctx)
-	passphrase, _ := getPassPhrase(ctx, "Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, nil)
-	acct, err := am.NewAccount(passphrase)
-	if err != nil {
-		utils.Fatalf("Could not create the account: %v", err)
-	}
-	fmt.Printf("Address: %x\n", acct)
-}
-
-func accountUpdate(ctx *cli.Context) {
-	am := utils.MakeAccountManager(ctx)
-	arg := ctx.Args().First()
-	if len(arg) == 0 {
-		utils.Fatalf("account address or index must be given as argument")
-	}
-
-	addr, authFrom, passphrases := unlockAccount(ctx, am, arg, 0, nil)
-	authTo, _ := getPassPhrase(ctx, "Please give a new password. Do not forget this password.", true, 0, passphrases)
-	err := am.Update(common.HexToAddress(addr), authFrom, authTo)
-	if err != nil {
-		utils.Fatalf("Could not update the account: %v", err)
-	}
-}
-
-func importWallet(ctx *cli.Context) {
-	keyfile := ctx.Args().First()
-	if len(keyfile) == 0 {
-		utils.Fatalf("keyfile must be given as argument")
-	}
-	keyJson, err := ioutil.ReadFile(keyfile)
-	if err != nil {
-		utils.Fatalf("Could not read wallet file: %v", err)
-	}
-
-	am := utils.MakeAccountManager(ctx)
-	passphrase, _ := getPassPhrase(ctx, "", false, 0, nil)
-
-	acct, err := am.ImportPreSaleKey(keyJson, passphrase)
-	if err != nil {
-		utils.Fatalf("Could not create the account: %v", err)
-	}
-	fmt.Printf("Address: %x\n", acct)
-}
-
-func accountImport(ctx *cli.Context) {
-	keyfile := ctx.Args().First()
-	if len(keyfile) == 0 {
-		utils.Fatalf("keyfile must be given as argument")
-	}
-	am := utils.MakeAccountManager(ctx)
-	passphrase, _ := getPassPhrase(ctx, "Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, nil)
-	acct, err := am.Import(keyfile, passphrase)
-	if err != nil {
-		utils.Fatalf("Could not create the account: %v", err)
-	}
-	fmt.Printf("Address: %x\n", acct)
-}
-
-func makedag(ctx *cli.Context) {
+func makedag(ctx *cli.Context) error {
 	args := ctx.Args()
 	wrongArgs := func() {
 		utils.Fatalf(`Usage: geth makedag <block number> <outputdir>`)
@@ -733,13 +361,15 @@ func makedag(ctx *cli.Context) {
 	default:
 		wrongArgs()
 	}
+	return nil
 }
 
-func gpuinfo(ctx *cli.Context) {
+func gpuinfo(ctx *cli.Context) error {
 	eth.PrintOpenCLDevices()
+	return nil
 }
 
-func gpubench(ctx *cli.Context) {
+func gpubench(ctx *cli.Context) error {
 	args := ctx.Args()
 	wrongArgs := func() {
 		utils.Fatalf(`Usage: geth gpubench <gpu number>`)
@@ -756,18 +386,18 @@ func gpubench(ctx *cli.Context) {
 	default:
 		wrongArgs()
 	}
+	return nil
 }
 
-func version(c *cli.Context) {
-	fmt.Println(ClientIdentifier)
-	fmt.Println("Version:", Version)
-	if gitCommit != "" {
-		fmt.Println("Git Commit:", gitCommit)
-	}
+func version(c *cli.Context) error {
+	fmt.Println(clientIdentifier)
+	fmt.Println("Version:", verString)
 	fmt.Println("Protocol Versions:", eth.ProtocolVersions)
 	fmt.Println("Network Id:", c.GlobalInt(utils.NetworkIdFlag.Name))
 	fmt.Println("Go Version:", runtime.Version())
 	fmt.Println("OS:", runtime.GOOS)
 	fmt.Printf("GOPATH=%s\n", os.Getenv("GOPATH"))
 	fmt.Printf("GOROOT=%s\n", runtime.GOROOT())
+
+	return nil
 }

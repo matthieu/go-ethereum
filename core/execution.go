@@ -74,7 +74,7 @@ func Suicide(env vm.Environment, me vm.ContractRef, origin common.Address) error
 }
 
 func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
-	evm := vm.NewVm(env)
+	evm := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if env.Depth() > int(params.CallCreateDepth.Int64()) {
@@ -151,7 +151,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining. Additionally
 	// when we're in homestead this also counts for code storage gas errors.
-	if err != nil && (params.IsHomestead(env.BlockNumber()) || err != vm.CodeStoreOutOfGasError) {
+	if err != nil && (env.RuleSet().IsHomestead(env.BlockNumber()) || err != vm.CodeStoreOutOfGasError) {
 		contract.UseGas(contract.Gas)
 		if inttx != nil {
 			inttx.Reject()
@@ -164,7 +164,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 }
 
 func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toAddr, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
-	evm := vm.NewVm(env)
+	evm := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if env.Depth() > int(params.CallCreateDepth.Int64()) {

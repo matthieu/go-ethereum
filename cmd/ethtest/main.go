@@ -25,10 +25,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/codegangsta/cli"
-	"github.com/matthieu/go-ethereum/core/vm"
 	"github.com/matthieu/go-ethereum/logger/glog"
+	"github.com/matthieu/go-ethereum/params"
 	"github.com/matthieu/go-ethereum/tests"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -74,9 +74,10 @@ func runTestWithReader(test string, r io.Reader) error {
 	var err error
 	switch strings.ToLower(test) {
 	case "bk", "block", "blocktest", "blockchaintest", "blocktests", "blockchaintests":
-		err = tests.RunBlockTestWithReader(r, skipTests)
+		err = tests.RunBlockTestWithReader(params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, r, skipTests)
 	case "st", "state", "statetest", "statetests":
-		err = tests.RunStateTestWithReader(r, skipTests)
+		rs := tests.RuleSet{HomesteadBlock: params.MainNetHomesteadBlock, DAOForkBlock: params.MainNetDAOForkBlock, DAOForkSupport: true}
+		err = tests.RunStateTestWithReader(rs, r, skipTests)
 	case "tx", "transactiontest", "transactiontests":
 		err = tests.RunTransactionTestsWithReader(r, skipTests)
 	case "vm", "vmtest", "vmtests":
@@ -182,13 +183,12 @@ func runSuite(test, file string) {
 	}
 }
 
-func setupApp(c *cli.Context) {
+func setupApp(c *cli.Context) error {
 	flagTest := c.GlobalString(TestFlag.Name)
 	flagFile := c.GlobalString(FileFlag.Name)
 	continueOnError = c.GlobalBool(ContinueOnErrorFlag.Name)
 	useStdIn := c.GlobalBool(ReadStdInFlag.Name)
 	skipTests = strings.Split(c.GlobalString(SkipTestsFlag.Name), " ")
-	vm.Debug = c.GlobalBool(TraceFlag.Name)
 
 	if !useStdIn {
 		runSuite(flagTest, flagFile)
@@ -196,8 +196,8 @@ func setupApp(c *cli.Context) {
 		if err := runTestWithReader(flagTest, os.Stdin); err != nil {
 			glog.Fatalln(err)
 		}
-
 	}
+	return nil
 }
 
 func main() {
