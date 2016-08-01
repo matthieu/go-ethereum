@@ -175,10 +175,10 @@ func NewProtocolManager(config *core.ChainConfig, fastSync bool, networkId int, 
 	}
 	manager.fetcher = fetcher.New(blockchain.GetBlock, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
 
-	if blockchain.Genesis().Hash().Hex() == defaultGenesisHash && networkId == 1 {
-		glog.V(logger.Debug).Infoln("Bad Block Reporting is enabled")
-		manager.badBlockReportingEnabled = true
-	}
+	// if blockchain.Genesis().Hash().Hex() == defaultGenesisHash && networkId == 1 {
+	// 	glog.V(logger.Debug).Infoln("Bad Block Reporting is enabled")
+	// 	manager.badBlockReportingEnabled = true
+	// }
 
 	return manager, nil
 }
