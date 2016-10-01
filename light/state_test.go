@@ -23,6 +23,7 @@ import (
 
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/core/state"
+	"github.com/matthieu/go-ethereum/crypto"
 	"github.com/matthieu/go-ethereum/ethdb"
 	"github.com/matthieu/go-ethereum/trie"
 	"golang.org/x/net/context"
@@ -61,7 +62,7 @@ func makeTestState() (common.Hash, ethdb.Database) {
 			so.SetNonce(100)
 		}
 		so.AddBalance(big.NewInt(int64(i)))
-		so.SetCode([]byte{i, i, i})
+		so.SetCode(crypto.Keccak256Hash([]byte{i, i, i}), []byte{i, i, i})
 		so.UpdateRoot(sdb)
 		st.UpdateStateObject(so)
 	}

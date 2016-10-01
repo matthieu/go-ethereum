@@ -284,11 +284,9 @@ func (self *StateObject) CodeSize(db trie.Database) int {
 	return *self.data.codeSize
 }
 
-func (self *StateObject) SetCode(code []byte) {
+func (self *StateObject) SetCode(codeHash common.Hash, code []byte) {
 	self.code = code
-	self.data.CodeHash = crypto.Keccak256(code)
-	self.data.codeSize = new(int)
-	*self.data.codeSize = len(code)
+	self.data.CodeHash = codeHash[:]
 	self.dirtyCode = true
 	if self.onDirty != nil {
 		self.onDirty(self.Address())
