@@ -145,7 +145,7 @@ func (self *VMEnv) AddStructLog(log vm.StructLog) {
 }
 
 func (self *VMEnv) AddInternalTransaction(inttx interface{}) {
-	if len(self.internalTxs) > 500 {
+	if len(self.internalTxs) > 200 {
 		return
 	}
 	internal := inttx.(*types.InternalTransaction)
