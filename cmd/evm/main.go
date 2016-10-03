@@ -24,7 +24,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/codegangsta/cli"
 	"github.com/matthieu/go-ethereum/cmd/utils"
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/core"
@@ -32,6 +31,7 @@ import (
 	"github.com/matthieu/go-ethereum/core/types"
 	"github.com/matthieu/go-ethereum/core/vm"
 	"github.com/matthieu/go-ethereum/ethdb"
+	"github.com/matthieu/go-ethereum/crypto"
 	"github.com/matthieu/go-ethereum/logger/glog"
 	"gopkg.in/urfave/cli.v1"
 )

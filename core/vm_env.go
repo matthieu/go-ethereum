@@ -132,10 +132,6 @@ func (self *VMEnv) Create(me vm.ContractRef, data []byte, gas, price, value *big
 	return Create(self, me, data, gas, price, value)
 }
 
-func (self *VMEnv) Suicide(me vm.ContractRef, origin common.Address) error {
-	return Suicide(self, me, origin)
-}
-
 func (self *VMEnv) StructLogs() []vm.StructLog {
 	return self.logs
 }

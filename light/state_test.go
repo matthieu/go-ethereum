@@ -43,7 +43,6 @@ func (odr *testOdr) Retrieve(ctx context.Context, req OdrRequest) error {
 	case *TrieRequest:
 		t, _ := trie.New(req.root, odr.sdb)
 		req.proof = t.Prove(req.key)
-		trie.ClearGlobalCache()
 	case *NodeDataRequest:
 		req.data, _ = odr.sdb.Get(req.hash[:])
 	}
@@ -76,7 +75,6 @@ func TestLightStateOdr(t *testing.T) {
 	odr := &testOdr{sdb: sdb, ldb: ldb}
 	ls := NewLightState(root, odr)
 	ctx := context.Background()
-	trie.ClearGlobalCache()
 
 	for i := byte(0); i < 100; i++ {
 		addr := common.Address{i}
@@ -161,7 +159,6 @@ func TestLightStateSetCopy(t *testing.T) {
 	odr := &testOdr{sdb: sdb, ldb: ldb}
 	ls := NewLightState(root, odr)
 	ctx := context.Background()
-	trie.ClearGlobalCache()
 
 	for i := byte(0); i < 100; i++ {
 		addr := common.Address{i}
@@ -238,7 +235,6 @@ func TestLightStateDelete(t *testing.T) {
 	odr := &testOdr{sdb: sdb, ldb: ldb}
 	ls := NewLightState(root, odr)
 	ctx := context.Background()
-	trie.ClearGlobalCache()
 
 	addr := common.Address{42}
 

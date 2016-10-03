@@ -611,7 +611,10 @@ func opStop(instr instruction, pc *uint64, env Environment, contract *Contract, 
 }
 
 func opSuicide(instr instruction, pc *uint64, env Environment, contract *Contract, memory *Memory, stack *stack) {
-	env.Suicide(contract, common.BigToAddress(stack.pop()))
+	balance := env.Db().GetBalance(contract.Address())
+	env.Db().AddBalance(common.BigToAddress(stack.pop()), balance)
+
+	env.Db().Delete(contract.Address())
 }
 
 // following functions are used by the instruction jump  table

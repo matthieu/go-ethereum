@@ -60,19 +60,6 @@ func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPric
 	return ret, address, err
 }
 
-func Suicide(env vm.Environment, me vm.ContractRef, origin common.Address) error {
-	balance := env.Db().GetBalance(me.Address())
-	env.Db().AddBalance(origin, balance)
-
-	nonce := env.Db().GetNonce(me.Address())
-	env.Db().Delete(me.Address())
-
-	inttx := types.NewInternalTransaction(
-		nonce, big.NewInt(0), big.NewInt(0), me.Address(), origin, balance, nil, "suicide")
-	env.AddInternalTransaction(inttx)
-	return nil
-}
-
 func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, codeHash common.Hash, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
 	evm := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
