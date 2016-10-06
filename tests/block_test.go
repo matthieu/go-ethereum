@@ -222,90 +222,20 @@ func TestDAOBcTheDao(t *testing.T) {
 	}
 }
 
-// Homestead tests
-func TestHomesteadBcValidBlockTests(t *testing.T) {
-	params.HomesteadBlock = big.NewInt(0)
-	err := RunBlockTest(filepath.Join(blockTestDir, "Homestead", "bcValidBlockTest.json"), BlockSkipTests)
+func TestHomesteadBcExploit(t *testing.T) {
+	err := RunBlockTest(big.NewInt(0), nil, filepath.Join(blockTestDir, "Homestead", "bcExploitTest.json"), BlockSkipTests)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
-
-func TestHomesteadBcUncleHeaderValidityTests(t *testing.T) {
-	params.HomesteadBlock = big.NewInt(0)
-	err := RunBlockTest(filepath.Join(blockTestDir, "Homestead", "bcUncleHeaderValiditiy.json"), BlockSkipTests)
+func TestHomesteadBcShanghaiLove(t *testing.T) {
+	err := RunBlockTest(big.NewInt(0), nil, filepath.Join(blockTestDir, "Homestead", "bcShanghaiLove.json"), BlockSkipTests)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
-
-func TestHomesteadBcUncleTests(t *testing.T) {
-	params.HomesteadBlock = big.NewInt(0)
-	err := RunBlockTest(filepath.Join(blockTestDir, "Homestead", "bcUncleTest.json"), BlockSkipTests)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestHomesteadBcInvalidHeaderTests(t *testing.T) {
-	params.HomesteadBlock = big.NewInt(0)
-	err := RunBlockTest(filepath.Join(blockTestDir, "Homestead", "bcInvalidHeaderTest.json"), BlockSkipTests)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestHomesteadBcRPCAPITests(t *testing.T) {
-	params.HomesteadBlock = big.NewInt(0)
-	err := RunBlockTest(filepath.Join(blockTestDir, "Homestead", "bcRPC_API_Test.json"), BlockSkipTests)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestHomesteadBcForkStress(t *testing.T) {
-	params.HomesteadBlock = big.NewInt(0)
-	err := RunBlockTest(filepath.Join(blockTestDir, "Homestead", "bcForkStressTest.json"), BlockSkipTests)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestHomesteadBcTotalDifficulty(t *testing.T) {
-	params.HomesteadBlock = big.NewInt(0)
-	err := RunBlockTest(filepath.Join(blockTestDir, "Homestead", "bcTotalDifficultyTest.json"), BlockSkipTests)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestHomesteadBcWallet(t *testing.T) {
-	params.HomesteadBlock = big.NewInt(0)
-	err := RunBlockTest(filepath.Join(blockTestDir, "Homestead", "bcWalletTest.json"), BlockSkipTests)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestHomesteadBcGasPricer(t *testing.T) {
-	params.HomesteadBlock = big.NewInt(0)
-	err := RunBlockTest(filepath.Join(blockTestDir, "Homestead", "bcGasPricerTest.json"), BlockSkipTests)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestHomesteadBcMultiChain(t *testing.T) {
-	params.HomesteadBlock = big.NewInt(0)
-	err := RunBlockTest(filepath.Join(blockTestDir, "Homestead", "bcMultiChainTest.json"), BlockSkipTests)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestHomesteadBcState(t *testing.T) {
-	params.HomesteadBlock = big.NewInt(0)
-	err := RunBlockTest(filepath.Join(blockTestDir, "Homestead", "bcStateTest.json"), BlockSkipTests)
+func TestHomesteadBcSuicideIssue(t *testing.T) {
+	err := RunBlockTest(big.NewInt(0), nil, filepath.Join(blockTestDir, "Homestead", "bcSuicideIssue.json"), BlockSkipTests)
 	if err != nil {
 		t.Fatal(err)
 	}

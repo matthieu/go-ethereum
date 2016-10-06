@@ -86,7 +86,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		createAccount = true
 	}
 
-	snapshotPreTransfer := env.MakeSnapshot()
+	snapshotPreTransfer := env.SnapshotDatabase()
 	var (
 		from = env.Db().GetAccount(caller.Address())
 		to   vm.Account
@@ -144,7 +144,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 			inttx.Reject()
 		}
 
-		env.SetSnapshot(snapshotPreTransfer)
+		env.RevertToSnapshot(snapshotPreTransfer)
 	}
 
 	return ret, addr, err
@@ -159,7 +159,7 @@ func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toA
 		return nil, common.Address{}, vm.DepthError
 	}
 
-	snapshot := env.MakeSnapshot()
+	snapshot := env.SnapshotDatabase()
 
 	var to vm.Account
 	if !env.Db().Exist(*toAddr) {
@@ -188,7 +188,7 @@ func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toA
 			inttx.Reject()
 		}
 
-		env.SetSnapshot(snapshot)
+		env.RevertToSnapshot(snapshot)
 	}
 
 	return ret, addr, err
