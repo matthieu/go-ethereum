@@ -25,12 +25,16 @@ import (
 	"github.com/matthieu/go-ethereum/core/vm"
 	"github.com/matthieu/go-ethereum/crypto"
 	"github.com/matthieu/go-ethereum/ethdb"
+	"github.com/matthieu/go-ethereum/params"
 )
 
 // The default, always homestead, rule set for the vm env
 type ruleSet struct{}
 
 func (ruleSet) IsHomestead(*big.Int) bool { return true }
+func (ruleSet) GasTable(*big.Int) params.GasTable {
+	return params.GasTableHomesteadGasRepriceFork
+}
 
 // Config is a basic type specifying certain configuration flags for running
 // the EVM.
