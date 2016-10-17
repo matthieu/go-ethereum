@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/golang-lru"
 	"github.com/matthieu/ethash"
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/core/state"
@@ -38,7 +39,6 @@ import (
 	"github.com/matthieu/go-ethereum/params"
 	"github.com/matthieu/go-ethereum/pow"
 	"github.com/matthieu/go-ethereum/rlp"
-	"github.com/hashicorp/golang-lru"
 )
 
 func init() {
@@ -141,7 +141,7 @@ func testBlockChainImport(chain types.Blocks, blockchain *BlockChain) error {
 		if err != nil {
 			return err
 		}
-		receipts, _, usedGas, err := blockchain.Processor().Process(block, statedb, vm.Config{})
+		receipts, _, usedGas, _, err := blockchain.Processor().Process(block, statedb, vm.Config{})
 		if err != nil {
 			reportBlock(block, err)
 			return err
@@ -435,8 +435,8 @@ func (bproc) ValidateHeader(*types.Header, *types.Header, bool) error { return n
 func (bproc) ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas *big.Int) error {
 	return nil
 }
-func (bproc) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, vm.Logs, *big.Int, error) {
-	return nil, nil, nil, nil
+func (bproc) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, vm.Logs, *big.Int, []*TxExecReport, error) {
+	return nil, nil, nil, nil, nil
 }
 
 func makeHeaderChainWithDiff(genesis *types.Block, d []int, seed byte) []*types.Header {
