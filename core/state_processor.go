@@ -19,6 +19,7 @@ package core
 import (
 	"math/big"
 
+	"github.com/blockcypher/prpl/dain/util"
 	"github.com/matthieu/go-ethereum/crypto"
 	"github.com/matthieu/go-ethereum/logger"
 	"github.com/matthieu/go-ethereum/logger/glog"
@@ -84,7 +85,8 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		statedb.StartRecord(tx.Hash(), block.Hash(), i)
-		receipt, logs, _, report, err := ApplyTransaction(p.config, p.bc, gp, statedb, header, tx, totalUsedGas, cfg)
+		receipt, logs, txg, report, err := ApplyTransaction(p.config, p.bc, gp, statedb, header, tx, totalUsedGas, cfg)
+		util.LogNotice("TX", i, "used", txg)
 		if err != nil {
 			return nil, nil, totalUsedGas, nil, err
 		}
@@ -107,6 +109,7 @@ func ApplyTransaction(config *ChainConfig, bc blockGetter, gp *GasPool, statedb 
 	report := &TxExecReport{Transaction: tx}
 	env := NewEnv(statedb, config, bc, tx, header, tx.Hash(), cfg)
 	_, gas, err := ApplyMessage(env, tx, gp, report)
+	util.LogNotice("Gas from ApplyMessage return:", gas, "from report:", report.GasUsed)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
