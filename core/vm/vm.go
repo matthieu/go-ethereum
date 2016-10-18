@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/blockcypher/prpl/dain/util"
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/crypto"
 	"github.com/matthieu/go-ethereum/logger"
@@ -66,6 +67,7 @@ func New(env Environment, cfg Config) *EVM {
 
 // Run loops and evaluates the contract's code with the given input data
 func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
+	util.LogNotice("GAS CREATEBYSUICIDE:", self.gasTable.CreateBySuicide)
 	evm.env.SetDepth(evm.env.Depth() + 1)
 	defer evm.env.SetDepth(evm.env.Depth() - 1)
 
