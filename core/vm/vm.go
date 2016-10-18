@@ -67,7 +67,7 @@ func New(env Environment, cfg Config) *EVM {
 
 // Run loops and evaluates the contract's code with the given input data
 func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
-	util.LogNotice("GAS CREATEBYSUICIDE:", self.gasTable.CreateBySuicide)
+	util.LogNotice("GAS CREATEBYSUICIDE:", evm.gasTable.CreateBySuicide)
 	evm.env.SetDepth(evm.env.Depth() + 1)
 	defer evm.env.SetDepth(evm.env.Depth() - 1)
 
