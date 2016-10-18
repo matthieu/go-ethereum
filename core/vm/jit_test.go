@@ -175,10 +175,11 @@ func NewEnv(noJit, forceJit bool) *Env {
 	return env
 }
 
-func (self *Env) RuleSet() RuleSet       { return ruleSet{new(big.Int)} }
-func (self *Env) Vm() Vm                 { return self.evm }
-func (self *Env) Origin() common.Address { return common.Address{} }
-func (self *Env) BlockNumber() *big.Int  { return big.NewInt(0) }
+func (self *Env) RuleSet() RuleSet             { return ruleSet{new(big.Int)} }
+func (self *Env) Vm() Vm                       { return self.evm }
+func (self *Env) Origin() common.Address       { return common.Address{} }
+func (self *Env) OriginationHash() common.Hash { return common.Hash{} }
+func (self *Env) BlockNumber() *big.Int        { return big.NewInt(0) }
 func (self *Env) AddStructLog(log StructLog) {
 }
 func (self *Env) StructLogs() []StructLog {
@@ -216,4 +217,8 @@ func (self *Env) Create(caller ContractRef, data []byte, gas, price, value *big.
 }
 func (self *Env) DelegateCall(me ContractRef, addr common.Address, data []byte, gas, price *big.Int) ([]byte, error) {
 	return nil, nil
+}
+
+func (self *Env) AddInternalTransaction(_ interface{}) {
+	return
 }
