@@ -151,6 +151,14 @@ func (self *VMEnv) AddInternalTransaction(inttx interface{}) {
 	self.internalTxs = append(self.internalTxs, internal)
 }
 
+func (self *VMEnv) RecordSuicide(srcAddr, dstAddr common.Address,
+	srcNonce uint64, gas, gasPrice, balance *big.Int) {
+
+	self.AddInternalTransaction(
+		types.NewInternalTransaction(srcNonce, gasPrice, gas, srcAddr, dstAddr,
+			balance, append([]byte{vm.SUICIDE}, dstAddr[:]...), "suicide"))
+}
+
 func (self *VMEnv) InternalTransactions() []*types.InternalTransaction {
 	return self.internalTxs
 }

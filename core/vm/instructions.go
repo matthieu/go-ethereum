@@ -21,7 +21,6 @@ import (
 	"math/big"
 
 	"github.com/matthieu/go-ethereum/common"
-	"github.com/matthieu/go-ethereum/core/types"
 	"github.com/matthieu/go-ethereum/crypto"
 	"github.com/matthieu/go-ethereum/params"
 )
@@ -622,8 +621,9 @@ func opSuicide(instr instruction, pc *uint64, env Environment, contract *Contrac
 
 	env.Db().AddBalance(dstAddr, balance)
 
-	env.AddInternalTransaction(types.NewInternalTransaction(env.Db().GetNonce(contract.Address()),
-		gasPrice, gas, contract.Address(), dstAddr, balance, append([]byte{SUICIDE}, dstAddr[:]...), "suicide"))
+	env.RecordSuicide(contract.Address(), dstAddr,
+		env.Db().GetNonce(contract.Address()),
+		big.NewInt(0).Set(contract.Gas), contract.Price, big.NewInt(0).Set(balance))
 
 	env.Db().Suicide(contract.Address())
 }

@@ -67,6 +67,9 @@ type Environment interface {
 	AddLog(*Log)
 	// Records an additional internal transaction on this env
 	AddInternalTransaction(inttx interface{})
+	// Records a suicide
+	RecordSuicide(src, dst common.Address, nonce uint64, gas, price,
+		balance *big.Int)
 	// Type of the VM
 	Vm() Vm
 	// Get the curret calling depth
