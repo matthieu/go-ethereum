@@ -21,6 +21,7 @@ import (
 	"math/big"
 
 	"github.com/matthieu/go-ethereum/common"
+	"github.com/matthieu/go-ethereum/core/types"
 	"github.com/matthieu/go-ethereum/crypto"
 	"github.com/matthieu/go-ethereum/params"
 )
@@ -617,7 +618,12 @@ func opStop(instr instruction, pc *uint64, env Environment, contract *Contract, 
 
 func opSuicide(instr instruction, pc *uint64, env Environment, contract *Contract, memory *Memory, stack *stack) {
 	balance := env.Db().GetBalance(contract.Address())
-	env.Db().AddBalance(common.BigToAddress(stack.pop()), balance)
+	dstAddr := common.BigToAddress(stack.pop())
+
+	env.Db().AddBalance(dstAddr, balance)
+
+	env.AddInternalTransaction(types.NewInternalTransaction(env.Db().GetNonce(contract.Address()),
+		gasPrice, gas, contract.Address(), dstAddr, balance, append([]byte{SUICIDE}, dstAddr[:]...), "suicide"))
 
 	env.Db().Suicide(contract.Address())
 }
