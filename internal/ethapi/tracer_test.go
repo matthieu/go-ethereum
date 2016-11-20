@@ -26,11 +26,8 @@ import (
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/core/vm"
 	"github.com/matthieu/go-ethereum/crypto"
+	"github.com/matthieu/go-ethereum/params"
 )
-
-type ruleSet struct{}
-
-func (self *ruleSet) IsHomestead(*big.Int) bool { return true }
 
 type Env struct {
 	gasLimit *big.Int
@@ -44,20 +41,22 @@ func NewEnv(config *vm.Config) *Env {
 	return env
 }
 
-func (self *Env) RuleSet() vm.RuleSet    { return &ruleSet{} }
+func (self *Env) ChainConfig() *params.ChainConfig {
+	return params.TestChainConfig
+}
 func (self *Env) Vm() vm.Vm              { return self.evm }
 func (self *Env) Origin() common.Address { return common.Address{} }
 func (self *Env) BlockNumber() *big.Int  { return big.NewInt(0) }
 
 //func (self *Env) PrevHash() []byte      { return self.parent }
-func (self *Env) Coinbase() common.Address  { return common.Address{} }
-func (self *Env) MakeSnapshot() vm.Database { return nil }
-func (self *Env) SetSnapshot(vm.Database)   {}
-func (self *Env) Time() *big.Int            { return big.NewInt(time.Now().Unix()) }
-func (self *Env) Difficulty() *big.Int      { return big.NewInt(0) }
-func (self *Env) Db() vm.Database           { return nil }
-func (self *Env) GasLimit() *big.Int        { return self.gasLimit }
-func (self *Env) VmType() vm.Type           { return vm.StdVmTy }
+func (self *Env) Coinbase() common.Address { return common.Address{} }
+func (self *Env) SnapshotDatabase() int    { return 0 }
+func (self *Env) RevertToSnapshot(int)     {}
+func (self *Env) Time() *big.Int           { return big.NewInt(time.Now().Unix()) }
+func (self *Env) Difficulty() *big.Int     { return big.NewInt(0) }
+func (self *Env) Db() vm.Database          { return nil }
+func (self *Env) GasLimit() *big.Int       { return self.gasLimit }
+func (self *Env) VmType() vm.Type          { return vm.StdVmTy }
 func (self *Env) GetHash(n uint64) common.Hash {
 	return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(n)).String())))
 }

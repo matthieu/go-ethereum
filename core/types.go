@@ -19,10 +19,6 @@ package core
 import (
 	"math/big"
 
-	"github.com/matthieu/go-ethereum/accounts"
-	"github.com/matthieu/go-ethereum/ethdb"
-	"github.com/matthieu/go-ethereum/event"
-
 	"github.com/matthieu/go-ethereum/core/state"
 	"github.com/matthieu/go-ethereum/core/types"
 	"github.com/matthieu/go-ethereum/core/vm"
@@ -63,17 +59,4 @@ type HeaderValidator interface {
 // failed.
 type Processor interface {
 	Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, vm.Logs, *big.Int, []*TxExecReport, error)
-}
-
-// Backend is an interface defining the basic functionality for an operable node
-// with all the functionality to be a functional, valid Ethereum operator.
-//
-// TODO Remove this
-type Backend interface {
-	AccountManager() *accounts.Manager
-	BlockChain() *BlockChain
-	TxPool() *TxPool
-	ChainDb() ethdb.Database
-	DappDb() ethdb.Database
-	EventMux() *event.TypeMux
 }

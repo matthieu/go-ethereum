@@ -225,7 +225,16 @@ func RunVm(state *state.StateDB, env, exec map[string]string) ([]byte, vm.Logs, 
 
 	caller := state.GetOrNewStateObject(from)
 
+<<<<<<< HEAD
 	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true, nil}, state, env, exec)
+=======
+	chainConfig := &params.ChainConfig{
+		HomesteadBlock: params.MainNetHomesteadBlock,
+		DAOForkBlock:   params.MainNetDAOForkBlock,
+		DAOForkSupport: true,
+	}
+	vmenv := NewEnvFromMap(chainConfig, state, env, exec)
+>>>>>>> upstream/master
 	vmenv.vmTest = true
 	vmenv.skipTransfer = true
 	vmenv.initial = true

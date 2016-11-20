@@ -18,6 +18,8 @@ package vm
 
 import (
 	"math/big"
+
+	"github.com/matthieu/go-ethereum/params"
 )
 
 type jumpPtr struct {
@@ -27,7 +29,7 @@ type jumpPtr struct {
 
 type vmJumpTable [256]jumpPtr
 
-func newJumpTable(ruleset RuleSet, blockNumber *big.Int) vmJumpTable {
+func newJumpTable(ruleset *params.ChainConfig, blockNumber *big.Int) vmJumpTable {
 	var jumpTable vmJumpTable
 
 	// when initialising a new VM execution we must first check the homestead

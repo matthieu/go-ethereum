@@ -32,11 +32,12 @@ import (
 	"github.com/matthieu/go-ethereum/ethdb"
 	"github.com/matthieu/go-ethereum/logger"
 	"github.com/matthieu/go-ethereum/logger/glog"
+	"github.com/matthieu/go-ethereum/params"
 )
 
 // registryAPIBackend is a backend for an Ethereum Registry.
 type registryAPIBackend struct {
-	config  *core.ChainConfig
+	config  *params.ChainConfig
 	bc      *core.BlockChain
 	chainDb ethdb.Database
 	txPool  *core.TxPool
@@ -45,12 +46,12 @@ type registryAPIBackend struct {
 
 // PrivateRegistarAPI offers various functions to access the Ethereum registry.
 type PrivateRegistarAPI struct {
-	config *core.ChainConfig
+	config *params.ChainConfig
 	be     *registryAPIBackend
 }
 
 // NewPrivateRegistarAPI creates a new PrivateRegistarAPI instance.
-func NewPrivateRegistarAPI(config *core.ChainConfig, bc *core.BlockChain, chainDb ethdb.Database, txPool *core.TxPool, am *accounts.Manager) *PrivateRegistarAPI {
+func NewPrivateRegistarAPI(config *params.ChainConfig, bc *core.BlockChain, chainDb ethdb.Database, txPool *core.TxPool, am *accounts.Manager) *PrivateRegistarAPI {
 	return &PrivateRegistarAPI{
 		config: config,
 		be: &registryAPIBackend{
@@ -128,7 +129,10 @@ func (m callmsg) FromFrontier() (common.Address, error) {
 	return m.from.Address(), nil
 }
 func (m callmsg) Nonce() uint64 {
-	return m.from.Nonce()
+	return 0
+}
+func (m callmsg) CheckNonce() bool {
+	return false
 }
 func (m callmsg) To() *common.Address {
 	return m.to
@@ -170,25 +174,20 @@ func (be *registryAPIBackend) Call(fromStr, toStr, valueStr, gasStr, gasPriceStr
 
 	from.SetBalance(common.MaxBig)
 
-	msg := callmsg{
-		from:     from,
-		gas:      common.Big(gasStr),
-		gasPrice: common.Big(gasPriceStr),
-		value:    common.Big(valueStr),
-		data:     common.FromHex(dataStr),
-	}
+	var to *common.Address
 	if len(toStr) > 0 {
 		addr := common.HexToAddress(toStr)
-		msg.to = &addr
+		to = &addr
 	}
-
-	if msg.gas.Cmp(big.NewInt(0)) == 0 {
-		msg.gas = big.NewInt(50000000)
+	gas := common.Big(gasStr)
+	if gas.BitLen() == 0 {
+		gas = big.NewInt(50000000)
 	}
-
-	if msg.gasPrice.Cmp(big.NewInt(0)) == 0 {
-		msg.gasPrice = new(big.Int).Mul(big.NewInt(50), common.Shannon)
+	gasPrice := common.Big(gasPriceStr)
+	if gasPrice.BitLen() == 0 {
+		gasPrice = new(big.Int).Mul(big.NewInt(50), common.Shannon)
 	}
+	msg := types.NewMessage(from.Address(), to, 0, common.Big(valueStr), gas, gasPrice, common.FromHex(dataStr), false)
 
 	header := be.bc.CurrentBlock().Header()
 	vmenv := core.NewEnv(statedb, be.config, be.bc, msg, header, common.Hash{}, vm.Config{})
@@ -254,11 +253,12 @@ func (be *registryAPIBackend) Transact(fromStr, toStr, nonceStr, valueStr, gasSt
 		tx = types.NewTransaction(nonce, to, value, gas, price, data)
 	}
 
-	signature, err := be.am.Sign(from, tx.SigHash().Bytes())
+	sigHash := (types.HomesteadSigner{}).Hash(tx)
+	signature, err := be.am.SignEthereum(from, sigHash.Bytes())
 	if err != nil {
 		return "", err
 	}
-	signedTx, err := tx.WithSignature(signature)
+	signedTx, err := tx.WithSignature(types.HomesteadSigner{}, signature)
 	if err != nil {
 		return "", err
 	}

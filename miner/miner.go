@@ -22,11 +22,13 @@ import (
 	"math/big"
 	"sync/atomic"
 
+	"github.com/matthieu/go-ethereum/accounts"
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/core"
 	"github.com/matthieu/go-ethereum/core/state"
 	"github.com/matthieu/go-ethereum/core/types"
 	"github.com/matthieu/go-ethereum/eth/downloader"
+	"github.com/matthieu/go-ethereum/ethdb"
 	"github.com/matthieu/go-ethereum/event"
 	"github.com/matthieu/go-ethereum/logger"
 	"github.com/matthieu/go-ethereum/logger/glog"
@@ -34,6 +36,15 @@ import (
 	"github.com/matthieu/go-ethereum/pow"
 )
 
+// Backend wraps all methods required for mining.
+type Backend interface {
+	AccountManager() *accounts.Manager
+	BlockChain() *core.BlockChain
+	TxPool() *core.TxPool
+	ChainDb() ethdb.Database
+}
+
+// Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
 	mux *event.TypeMux
 
@@ -44,15 +55,21 @@ type Miner struct {
 	threads  int
 	coinbase common.Address
 	mining   int32
-	eth      core.Backend
+	eth      Backend
 	pow      pow.PoW
 
 	canStart    int32 // can start indicates whether we can start the mining operation
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(eth core.Backend, config *core.ChainConfig, mux *event.TypeMux, pow pow.PoW) *Miner {
-	miner := &Miner{eth: eth, mux: mux, pow: pow, worker: newWorker(config, common.Address{}, eth), canStart: 1}
+func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, pow pow.PoW) *Miner {
+	miner := &Miner{
+		eth:      eth,
+		mux:      mux,
+		pow:      pow,
+		worker:   newWorker(config, common.Address{}, eth, mux),
+		canStart: 1,
+	}
 	go miner.update()
 
 	return miner

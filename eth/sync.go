@@ -166,7 +166,7 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 	}
 	// Make sure the peer's TD is higher than our own
 	currentBlock := pm.blockchain.CurrentBlock()
-	td := pm.blockchain.GetTd(currentBlock.Hash())
+	td := pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
 
 	pHead, pTd := peer.Head()
 	if pTd.Cmp(td) <= 0 {

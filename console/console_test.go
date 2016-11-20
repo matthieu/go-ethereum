@@ -23,17 +23,16 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/matthieu/go-ethereum/accounts"
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/core"
 	"github.com/matthieu/go-ethereum/eth"
 	"github.com/matthieu/go-ethereum/internal/jsre"
 	"github.com/matthieu/go-ethereum/node"
+	"github.com/matthieu/go-ethereum/params"
 )
 
 const (
@@ -92,18 +91,16 @@ func newTester(t *testing.T, confOverride func(*eth.Config)) *tester {
 	if err != nil {
 		t.Fatalf("failed to create temporary keystore: %v", err)
 	}
-	accman := accounts.NewPlaintextManager(filepath.Join(workspace, "keystore"))
 
 	// Create a networkless protocol stack and start an Ethereum service within
-	stack, err := node.New(&node.Config{DataDir: workspace, Name: testInstance, NoDiscovery: true})
+	stack, err := node.New(&node.Config{DataDir: workspace, UseLightweightKDF: true, Name: testInstance, NoDiscovery: true})
 	if err != nil {
 		t.Fatalf("failed to create node: %v", err)
 	}
 	ethConf := &eth.Config{
-		ChainConfig:    &core.ChainConfig{HomesteadBlock: new(big.Int)},
-		Etherbase:      common.HexToAddress(testAddress),
-		AccountManager: accman,
-		PowTest:        true,
+		ChainConfig: &params.ChainConfig{HomesteadBlock: new(big.Int), ChainId: new(big.Int)},
+		Etherbase:   common.HexToAddress(testAddress),
+		PowTest:     true,
 	}
 	if confOverride != nil {
 		confOverride(ethConf)

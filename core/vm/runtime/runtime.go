@@ -22,7 +22,6 @@ import (
 
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/core/state"
-	"github.com/matthieu/go-ethereum/core/vm"
 	"github.com/matthieu/go-ethereum/crypto"
 	"github.com/matthieu/go-ethereum/ethdb"
 	"github.com/matthieu/go-ethereum/params"
@@ -39,7 +38,7 @@ func (ruleSet) GasTable(*big.Int) params.GasTable {
 // Config is a basic type specifying certain configuration flags for running
 // the EVM.
 type Config struct {
-	RuleSet     vm.RuleSet
+	ChainConfig *params.ChainConfig
 	Difficulty  *big.Int
 	Origin      common.Address
 	Coinbase    common.Address
@@ -57,8 +56,16 @@ type Config struct {
 
 // sets defaults on the config
 func setDefaults(cfg *Config) {
-	if cfg.RuleSet == nil {
-		cfg.RuleSet = ruleSet{}
+	if cfg.ChainConfig == nil {
+		cfg.ChainConfig = &params.ChainConfig{
+			ChainId:        big.NewInt(1),
+			HomesteadBlock: new(big.Int),
+			DAOForkBlock:   new(big.Int),
+			DAOForkSupport: false,
+			EIP150Block:    new(big.Int),
+			EIP155Block:    new(big.Int),
+			EIP158Block:    new(big.Int),
+		}
 	}
 
 	if cfg.Difficulty == nil {

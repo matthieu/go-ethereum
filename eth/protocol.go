@@ -105,12 +105,6 @@ type txPool interface {
 	Pending() map[common.Address]types.Transactions
 }
 
-type chainManager interface {
-	GetBlockHashesFromHash(hash common.Hash, amount uint64) (hashes []common.Hash)
-	GetBlock(hash common.Hash) (block *types.Block)
-	Status() (td *big.Int, currentBlock common.Hash, genesisBlock common.Hash)
-}
-
 // proxy interface to core.BlockChain
 type blockChain interface {
 	Status() (td *big.Int, currentBlock common.Hash, genesisBlock common.Hash)

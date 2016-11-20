@@ -20,13 +20,14 @@ import (
 	"math/big"
 
 	"github.com/blockcypher/prpl/dain/util"
-	"github.com/matthieu/go-ethereum/crypto"
-	"github.com/matthieu/go-ethereum/logger"
-	"github.com/matthieu/go-ethereum/logger/glog"
 
 	"github.com/matthieu/go-ethereum/core/state"
 	"github.com/matthieu/go-ethereum/core/types"
 	"github.com/matthieu/go-ethereum/core/vm"
+	"github.com/matthieu/go-ethereum/crypto"
+	"github.com/matthieu/go-ethereum/logger"
+	"github.com/matthieu/go-ethereum/logger/glog"
+	"github.com/matthieu/go-ethereum/params"
 )
 
 var (
@@ -49,12 +50,13 @@ type TxExecReport struct {
 //
 // StateProcessor implements Processor.
 type StateProcessor struct {
-	config *ChainConfig
+	config *params.ChainConfig
 	bc     blockGetter
 }
 
 // NewStateProcessor initialises a new StateProcessor.
-func NewStateProcessor(config *ChainConfig, bc blockGetter) *StateProcessor {
+func NewStateProcessor(config *params.ChainConfig, bc blockGetter) *StateProcessor {
+
 	return &StateProcessor{
 		config: config,
 		bc:     bc,
@@ -104,24 +106,28 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 //
 // ApplyTransactions returns the generated receipts and vm logs during the
 // execution of the state transition phase.
-func ApplyTransaction(config *ChainConfig, bc blockGetter, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int, cfg vm.Config) (*types.Receipt, vm.Logs, *big.Int, *TxExecReport, error) {
+func ApplyTransaction(config *params.ChainConfig, bc blockGetter, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int, cfg vm.Config) (*types.Receipt, vm.Logs, *big.Int, *TxExecReport, error) {
 
+	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number))
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	report := &TxExecReport{Transaction: tx}
 	env := NewEnv(statedb, config, bc, tx, header, tx.Hash(), cfg)
-	_, gas, err := ApplyMessage(env, tx, gp, report)
+	_, gas, err := ApplyMessage(env, msg, gp, report)
 	util.LogNotice("Gas from ApplyMessage return:", gas, "from report:", report.GasUsed)
+
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 
 	// Update the state with pending changes
 	usedGas.Add(usedGas, report.GasUsed)
-	receipt := types.NewReceipt(statedb.IntermediateRoot().Bytes(), usedGas)
+	receipt := types.NewReceipt(statedb.IntermediateRoot(config.IsEIP158(header.Number)).Bytes(), usedGas)
 	receipt.TxHash = tx.Hash()
 	receipt.GasUsed = new(big.Int).Set(report.GasUsed)
-	if MessageCreatesContract(tx) {
-		from, _ := tx.From()
-		receipt.ContractAddress = crypto.CreateAddress(from, tx.Nonce())
+	if MessageCreatesContract(msg) {
+		receipt.ContractAddress = crypto.CreateAddress(msg.From(), tx.Nonce())
 	}
 
 	logs := statedb.GetLogs(tx.Hash())

@@ -42,13 +42,13 @@ var (
 //
 // BlockValidator implements Validator.
 type BlockValidator struct {
-	config *ChainConfig // Chain configuration options
-	bc     *BlockChain  // Canonical block chain
-	Pow    pow.PoW      // Proof of work used for validating
+	config *params.ChainConfig // Chain configuration options
+	bc     *BlockChain         // Canonical block chain
+	Pow    pow.PoW             // Proof of work used for validating
 }
 
 // NewBlockValidator returns a new block validator which is safe for re-use
-func NewBlockValidator(config *ChainConfig, blockchain *BlockChain, pow pow.PoW) *BlockValidator {
+func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain, pow pow.PoW) *BlockValidator {
 	validator := &BlockValidator{
 		config: config,
 		Pow:    pow,
@@ -65,7 +65,7 @@ func NewBlockValidator(config *ChainConfig, blockchain *BlockChain, pow pow.PoW)
 //
 // ValidateBlock also validates and makes sure that any previous state (or present)
 // state that might or might not be present is checked to make sure that fast
-// sync has done it's job proper. This prevents the block validator form accepting
+// sync has done it's job proper. This prevents the block validator from accepting
 // false positives where a header is present but the state is not.
 func (v *BlockValidator) ValidateBlock(block *types.Block) error {
 	if v.bc.HasBlock(block.Hash()) {
@@ -73,7 +73,7 @@ func (v *BlockValidator) ValidateBlock(block *types.Block) error {
 			return &KnownBlockError{block.Number(), block.Hash()}
 		}
 	}
-	parent := v.bc.GetBlock(block.ParentHash())
+	parent := v.bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
 	if parent == nil {
 		return ParentError(block.ParentHash())
 	}
@@ -134,7 +134,7 @@ func ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts 
 	}
 	// Validate the state root against the received state root and throw
 	// an error if they don't match.
-	if root := statedb.IntermediateRoot(); header.Root != root {
+	if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
 		return fmt.Errorf("invalid merkle root: header=%x computed=%x", header.Root, root)
 	}
 	return nil
@@ -144,8 +144,8 @@ func ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts 
 // consensus rules to the various block headers included; it will return an
 // error if any of the included uncle headers were invalid. It returns an error
 // if the validation failed.
-func VerifyUncles(config *ChainConfig, pow pow.PoW, block, parent *types.Block, ancestorList []*types.Block) error {
-	// validate that there at most 2 uncles included in this block
+func (v *BlockValidator) VerifyUncles(block, parent *types.Block) error {
+	// validate that there are at most 2 uncles included in this block
 	if len(block.Uncles()) > 2 {
 		return ValidationError("Block can only contain maximum 2 uncles (contained %v)", len(block.Uncles()))
 	}
@@ -199,7 +199,7 @@ func (v *BlockValidator) ValidateHeader(header, parent *types.Header, checkPow b
 	if parent == nil {
 		return ParentError(header.ParentHash)
 	}
-	// Short circuit if the header's already known or its parent missing
+	// Short circuit if the header's already known or its parent is missing
 	if v.bc.HasHeader(header.Hash()) {
 		return nil
 	}
@@ -209,7 +209,7 @@ func (v *BlockValidator) ValidateHeader(header, parent *types.Header, checkPow b
 // Validates a header. Returns an error if the header is invalid.
 //
 // See YP section 4.3.4. "Block Header Validity"
-func ValidateHeader(config *ChainConfig, pow pow.PoW, header *types.Header, parent *types.Header, checkPow, uncle bool) error {
+func ValidateHeader(config *params.ChainConfig, pow pow.PoW, header *types.Header, parent *types.Header, checkPow, uncle bool) error {
 	if big.NewInt(int64(len(header.Extra))).Cmp(params.MaximumExtraDataSize) == 1 {
 		return fmt.Errorf("Header extra data too long (%d)", len(header.Extra))
 	}
@@ -254,13 +254,21 @@ func ValidateHeader(config *ChainConfig, pow pow.PoW, header *types.Header, pare
 		}
 	}
 	// If all checks passed, validate the extra-data field for hard forks
-	return ValidateDAOHeaderExtraData(config, header)
+	if err := ValidateDAOHeaderExtraData(config, header); err != nil {
+		return err
+	}
+	if !uncle && config.EIP150Block != nil && config.EIP150Block.Cmp(header.Number) == 0 {
+		if config.EIP150Hash != (common.Hash{}) && config.EIP150Hash != header.Hash() {
+			return ValidationError("Homestead gas reprice fork hash mismatch: have 0x%x, want 0x%x", header.Hash(), config.EIP150Hash)
+		}
+	}
+	return nil
 }
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns
 // the difficulty that a new block should have when created at time
 // given the parent block's time and difficulty.
-func CalcDifficulty(config *ChainConfig, time, parentTime uint64, parentNumber, parentDiff *big.Int) *big.Int {
+func CalcDifficulty(config *params.ChainConfig, time, parentTime uint64, parentNumber, parentDiff *big.Int) *big.Int {
 	if config.IsHomestead(new(big.Int).Add(parentNumber, common.Big1)) {
 		return calcDifficultyHomestead(time, parentTime, parentNumber, parentDiff)
 	} else {
