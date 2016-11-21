@@ -26,7 +26,6 @@ import (
 	"sync/atomic"
 	"time"
 
-<<<<<<< HEAD
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/core"
 	"github.com/matthieu/go-ethereum/core/types"
@@ -38,24 +37,9 @@ import (
 	"github.com/matthieu/go-ethereum/logger/glog"
 	"github.com/matthieu/go-ethereum/p2p"
 	"github.com/matthieu/go-ethereum/p2p/discover"
+	"github.com/matthieu/go-ethereum/params"
 	"github.com/matthieu/go-ethereum/pow"
 	"github.com/matthieu/go-ethereum/rlp"
-=======
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/fetcher"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/logger"
-	"github.com/ethereum/go-ethereum/logger/glog"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/pow"
-	"github.com/ethereum/go-ethereum/rlp"
->>>>>>> upstream/master
 )
 
 const (
@@ -82,16 +66,10 @@ type ProtocolManager struct {
 	synced   uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
 	txpool      txPool
-<<<<<<< HEAD
 	blockchain  blockChain
-	chaindb     ethdb.Database
-	chainconfig *core.ChainConfig
-=======
-	blockchain  *core.BlockChain
 	chaindb     ethdb.Database
 	chainconfig *params.ChainConfig
 	maxPeers    int
->>>>>>> upstream/master
 
 	downloader *downloader.Downloader
 	fetcher    *fetcher.Fetcher
@@ -118,11 +96,7 @@ type ProtocolManager struct {
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the ethereum network.
-<<<<<<< HEAD
-func NewProtocolManager(config *core.ChainConfig, fastSync bool, networkId int, mux *event.TypeMux, txpool txPool, pow pow.PoW, blockchain blockChain, chaindb ethdb.Database) (*ProtocolManager, error) {
-=======
-func NewProtocolManager(config *params.ChainConfig, fastSync bool, networkId int, maxPeers int, mux *event.TypeMux, txpool txPool, pow pow.PoW, blockchain *core.BlockChain, chaindb ethdb.Database) (*ProtocolManager, error) {
->>>>>>> upstream/master
+func NewProtocolManager(config *params.ChainConfig, fastSync bool, networkId int, maxPeers int, mux *event.TypeMux, txpool txPool, pow pow.PoW, blockchain blockChain, chaindb ethdb.Database) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkId:   networkId,
@@ -131,10 +105,7 @@ func NewProtocolManager(config *params.ChainConfig, fastSync bool, networkId int
 		blockchain:  blockchain,
 		chaindb:     chaindb,
 		chainconfig: config,
-<<<<<<< HEAD
-=======
 		maxPeers:    maxPeers,
->>>>>>> upstream/master
 		peers:       newPeerSet(),
 		newPeerCh:   make(chan *peer),
 		noMorePeers: make(chan struct{}),
@@ -188,15 +159,9 @@ func NewProtocolManager(config *params.ChainConfig, fastSync bool, networkId int
 		return nil, errIncompatibleConfig
 	}
 	// Construct the different synchronisation mechanisms
-<<<<<<< HEAD
-	manager.downloader = downloader.New(chaindb, manager.eventMux, blockchain.HasHeader, blockchain.HasBlockAndState, blockchain.GetHeader,
-		blockchain.GetBlock, blockchain.CurrentHeader, blockchain.CurrentBlock, blockchain.CurrentFastBlock, blockchain.FastSyncCommitHead,
-		blockchain.GetTd, blockchain.InsertHeaderChain, manager.insertChain, blockchain.InsertReceiptChain, blockchain.Rollback,
-=======
 	manager.downloader = downloader.New(downloader.FullSync, chaindb, manager.eventMux, blockchain.HasHeader, blockchain.HasBlockAndState, blockchain.GetHeaderByHash,
 		blockchain.GetBlockByHash, blockchain.CurrentHeader, blockchain.CurrentBlock, blockchain.CurrentFastBlock, blockchain.FastSyncCommitHead,
 		blockchain.GetTdByHash, blockchain.InsertHeaderChain, manager.insertChain, blockchain.InsertReceiptChain, blockchain.Rollback,
->>>>>>> upstream/master
 		manager.removePeer)
 
 	validator := func(block *types.Block, parent *types.Block) error {
@@ -209,21 +174,12 @@ func NewProtocolManager(config *params.ChainConfig, fastSync bool, networkId int
 		atomic.StoreUint32(&manager.synced, 1) // Mark initial sync done on any fetcher import
 		return manager.insertChain(blocks)
 	}
-<<<<<<< HEAD
-	manager.fetcher = fetcher.New(blockchain.GetBlock, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
+	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
 
 	// if blockchain.Genesis().Hash().Hex() == defaultGenesisHash && networkId == 1 {
 	// 	glog.V(logger.Debug).Infoln("Bad Block Reporting is enabled")
 	// 	manager.badBlockReportingEnabled = true
 	// }
-=======
-	manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, heighter, inserter, manager.removePeer)
-
-	if blockchain.Genesis().Hash().Hex() == defaultGenesisHash && networkId == 1 {
-		glog.V(logger.Debug).Infoln("Bad Block Reporting is enabled")
-		manager.badBlockReportingEnabled = true
-	}
->>>>>>> upstream/master
 
 	return manager, nil
 }
@@ -471,11 +427,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			// If we already have a DAO header, we can check the peer's TD against it. If
 			// the peer's ahead of this, it too must have a reply to the DAO check
 			if daoHeader := pm.blockchain.GetHeaderByNumber(pm.chainconfig.DAOForkBlock.Uint64()); daoHeader != nil {
-<<<<<<< HEAD
-				if _, td := p.Head(); td.Cmp(pm.blockchain.GetTd(daoHeader.Hash())) >= 0 {
-=======
 				if _, td := p.Head(); td.Cmp(pm.blockchain.GetTd(daoHeader.Hash(), daoHeader.Number.Uint64())) >= 0 {
->>>>>>> upstream/master
 					verifyDAO = false
 				}
 			}
@@ -721,11 +673,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			// a singe block (as the true TD is below the propagated block), however this
 			// scenario should easily be covered by the fetcher.
 			currentBlock := pm.blockchain.CurrentBlock()
-<<<<<<< HEAD
-			if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash())) > 0 {
-=======
 			if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 {
->>>>>>> upstream/master
 				go pm.synchronise(p)
 			}
 		}

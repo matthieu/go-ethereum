@@ -19,19 +19,19 @@ package eth
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/eth/gasprice"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
-	"github.com/ethereum/go-ethereum/params"
-	rpc "github.com/ethereum/go-ethereum/rpc"
+	"github.com/matthieu/go-ethereum/accounts"
+	"github.com/matthieu/go-ethereum/common"
+	"github.com/matthieu/go-ethereum/core"
+	"github.com/matthieu/go-ethereum/core/state"
+	"github.com/matthieu/go-ethereum/core/types"
+	"github.com/matthieu/go-ethereum/core/vm"
+	"github.com/matthieu/go-ethereum/eth/downloader"
+	"github.com/matthieu/go-ethereum/eth/gasprice"
+	"github.com/matthieu/go-ethereum/ethdb"
+	"github.com/matthieu/go-ethereum/event"
+	"github.com/matthieu/go-ethereum/internal/ethapi"
+	"github.com/matthieu/go-ethereum/params"
+	rpc "github.com/matthieu/go-ethereum/rpc"
 	"golang.org/x/net/context"
 )
 
@@ -111,7 +111,7 @@ func (b *EthApiBackend) GetVMEnv(ctx context.Context, msg core.Message, state et
 	from := statedb.GetOrNewStateObject(msg.From())
 	from.SetBalance(common.MaxBig)
 	vmError := func() error { return nil }
-	return core.NewEnv(statedb, b.eth.chainConfig, b.eth.blockchain, msg, header, vm.Config{}), vmError, nil
+	return core.NewEnv(statedb, b.eth.chainConfig, b.eth.blockchain, msg, header, common.Hash{}, vm.Config{}), vmError, nil
 }
 
 func (b *EthApiBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {

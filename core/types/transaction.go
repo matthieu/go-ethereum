@@ -130,12 +130,12 @@ func pickSigner(rules params.Rules) Signer {
 
 // ChainId returns which chain id this transaction was signed for (if at all)
 func (tx *Transaction) ChainId() *big.Int {
-	return deriveChainId(tx.data.V)
+	return deriveChainId(tx.Dat.V)
 }
 
 // Protected returns whether the transaction is pretected from replay protection
 func (tx *Transaction) Protected() bool {
-	return isProtectedV(tx.data.V)
+	return isProtectedV(tx.Dat.V)
 }
 
 func isProtectedV(V *big.Int) bool {
@@ -169,15 +169,15 @@ func (tx *Transaction) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(&jsonTransaction{
 		Hash:         &hash,
-		AccountNonce: (*hexUint64)(&tx.data.AccountNonce),
-		Price:        (*hexBig)(tx.data.Price),
-		GasLimit:     (*hexBig)(tx.data.GasLimit),
-		Recipient:    tx.data.Recipient,
-		Amount:       (*hexBig)(tx.data.Amount),
-		Payload:      (*hexBytes)(&tx.data.Payload),
-		V:            (*hexBig)(tx.data.V),
-		R:            (*hexBig)(tx.data.R),
-		S:            (*hexBig)(tx.data.S),
+		AccountNonce: (*hexUint64)(&tx.Dat.AccountNonce),
+		Price:        (*hexBig)(tx.Dat.Price),
+		GasLimit:     (*hexBig)(tx.Dat.GasLimit),
+		Recipient:    tx.Dat.Recipient,
+		Amount:       (*hexBig)(tx.Dat.Amount),
+		Payload:      (*hexBytes)(&tx.Dat.Payload),
+		V:            (*hexBig)(tx.Dat.V),
+		R:            (*hexBig)(tx.Dat.R),
+		S:            (*hexBig)(tx.Dat.S),
 	})
 }
 
@@ -211,7 +211,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	// Assign the fields. This is not atomic but reusing transactions
 	// for decoding isn't thread safe anyway.
 	*tx = Transaction{}
-	tx.data = txdata{
+	tx.Dat = TxData{
 		AccountNonce: uint64(*dec.AccountNonce),
 		Recipient:    dec.Recipient,
 		Amount:       (*big.Int)(dec.Amount),
@@ -308,7 +308,7 @@ func (tx *Transaction) SignatureValues() (v byte, r *big.Int, s *big.Int, err er
 		return 0, nil, nil,errNoSigner
 	}
 
-	return normaliseV(tx.signer, tx.data.V), new(big.Int).Set(tx.data.R),new(big.Int).Set(tx.data.S), nil
+	return normaliseV(tx.signer, tx.Dat.V), new(big.Int).Set(tx.Dat.R),new(big.Int).Set(tx.Dat.S), nil
 }
 
 */
@@ -350,19 +350,19 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 
 // Cost returns amount + gasprice * gaslimit.
 func (tx *Transaction) Cost() *big.Int {
-	total := new(big.Int).Mul(tx.data.Price, tx.data.GasLimit)
-	total.Add(total, tx.data.Amount)
+	total := new(big.Int).Mul(tx.Dat.Price, tx.Dat.GasLimit)
+	total.Add(total, tx.Dat.Amount)
 	return total
 }
 
 func (tx *Transaction) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
-	return tx.data.V, tx.data.R, tx.data.S
+	return tx.Dat.V, tx.Dat.R, tx.Dat.S
 }
 
 func (tx *Transaction) String() string {
 	// make a best guess about the signer and use that to derive
 	// the sender.
-	signer := deriveSigner(tx.data.V)
+	signer := deriveSigner(tx.Dat.V)
 
 	var from, to string
 	if f, err := Sender(signer, tx); err != nil { // derive but don't cache
@@ -508,7 +508,7 @@ func (t *TransactionsByPriceAndNonce) Peek() *Transaction {
 
 // Shift replaces the current best head with the next one from the same account.
 func (t *TransactionsByPriceAndNonce) Shift() {
-	signer := deriveSigner(t.heads[0].data.V)
+	signer := deriveSigner(t.heads[0].Dat.V)
 	// derive signer but don't cache.
 	acc, _ := Sender(signer, t.heads[0]) // we only sort valid txs so this cannot fail
 	if txs, ok := t.txs[acc]; ok && len(txs) > 0 {

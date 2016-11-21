@@ -110,10 +110,10 @@ func ApplyTransaction(config *params.ChainConfig, bc blockGetter, gp *GasPool, s
 
 	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number))
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	report := &TxExecReport{Transaction: tx}
-	env := NewEnv(statedb, config, bc, tx, header, tx.Hash(), cfg)
+	env := NewEnv(statedb, config, bc, msg, header, tx.Hash(), cfg)
 	_, gas, err := ApplyMessage(env, msg, gp, report)
 	util.LogNotice("Gas from ApplyMessage return:", gas, "from report:", report.GasUsed)
 

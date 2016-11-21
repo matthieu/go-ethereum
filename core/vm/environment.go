@@ -36,8 +36,6 @@ type Environment interface {
 	RevertToSnapshot(int)
 	// Address of the original invoker (first occurrence of the VM invoker)
 	Origin() common.Address
-	// Hash of the original transaction/message
-	OriginationHash() common.Hash
 	// The block number this VM is invoken on
 	BlockNumber() *big.Int
 	// The n'th hash ago from this block number
@@ -113,6 +111,9 @@ type Database interface {
 	// Exist reports whether the given account exists in state.
 	// Notably this should also return true for suicided accounts.
 	Exist(common.Address) bool
+	// Empty returns whether the given account is empty. Empty
+	// is defined according to EIP161 (balance = nonce = code = 0).
+	Empty(common.Address) bool
 }
 
 // Account represents a contract or basic ethereum account.

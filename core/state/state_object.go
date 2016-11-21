@@ -204,7 +204,6 @@ func (self *StateObject) updateTrie(db trie.Database) {
 		v, _ := rlp.EncodeToBytes(bytes.TrimLeft(value[:], "\x00"))
 		tr.Update(key[:], v)
 	}
-	return err
 }
 
 // UpdateRoot sets the trie root to the current root hash of

@@ -52,12 +52,9 @@ type Node struct {
 	config   *Config
 	accman   *accounts.Manager
 
-<<<<<<< HEAD
-=======
 	ephemeralKeystore string          // if non-empty, the key directory that will be removed by Stop
 	instanceDirLock   storage.Storage // prevents concurrent use of instance directory
 
->>>>>>> upstream/master
 	serverConfig p2p.Config
 	server       *p2p.Server // Currently running P2P networking layer
 

@@ -113,10 +113,10 @@ func (v *BlockValidator) ValidateBlock(block *types.Block) error {
 // itself. ValidateState returns a database batch if the validation was a success
 // otherwise nil and an error is returned.
 func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts types.Receipts, usedGas *big.Int) (err error) {
-	return ValidateState(block, parent, statedb, receipts, usedGas)
+	return ValidateState(v.config, block, parent, statedb, receipts, usedGas)
 }
 
-func ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts types.Receipts, usedGas *big.Int) (err error) {
+func ValidateState(config *params.ChainConfig, block, parent *types.Block, statedb *state.StateDB, receipts types.Receipts, usedGas *big.Int) (err error) {
 	header := block.Header()
 	if block.GasUsed().Cmp(usedGas) != 0 {
 		return ValidationError(fmt.Sprintf("gas used error (%v / %v)", block.GasUsed(), usedGas))
@@ -134,7 +134,7 @@ func ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts 
 	}
 	// Validate the state root against the received state root and throw
 	// an error if they don't match.
-	if root := statedb.IntermediateRoot(v.config.IsEIP158(header.Number)); header.Root != root {
+	if root := statedb.IntermediateRoot(config.IsEIP158(header.Number)); header.Root != root {
 		return fmt.Errorf("invalid merkle root: header=%x computed=%x", header.Root, root)
 	}
 	return nil
@@ -144,7 +144,7 @@ func ValidateState(block, parent *types.Block, statedb *state.StateDB, receipts 
 // consensus rules to the various block headers included; it will return an
 // error if any of the included uncle headers were invalid. It returns an error
 // if the validation failed.
-func (v *BlockValidator) VerifyUncles(block, parent *types.Block) error {
+func VerifyUncles(config *params.ChainConfig, pow pow.PoW, block, parent *types.Block, ancestorList []*types.Block) error {
 	// validate that there are at most 2 uncles included in this block
 	if len(block.Uncles()) > 2 {
 		return ValidationError("Block can only contain maximum 2 uncles (contained %v)", len(block.Uncles()))
@@ -277,7 +277,7 @@ func CalcDifficulty(config *params.ChainConfig, time, parentTime uint64, parentN
 }
 
 func calcDifficultyHomestead(time, parentTime uint64, parentNumber, parentDiff *big.Int) *big.Int {
-	// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2.mediawiki
+	// https://github.com/matthieu/EIPs/blob/master/EIPS/eip-2.mediawiki
 	// algorithm:
 	// diff = (parent_diff +
 	//         (parent_diff / 2048 * max(1 - (block_timestamp - parent_timestamp) // 10, -99))

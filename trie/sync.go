@@ -82,11 +82,7 @@ func (s *TrieSync) AddSubTrie(root common.Hash, depth int, parent common.Hash, c
 	}
 	key := root.Bytes()
 	blob, _ := s.database.Get(key)
-<<<<<<< HEAD
-	if local, err := decodeNode(key, blob); local != nil && err == nil {
-=======
 	if local, err := decodeNode(key, blob, 0); local != nil && err == nil {
->>>>>>> upstream/master
 		return
 	}
 	// Assemble the new sub-trie sync request
@@ -156,11 +152,7 @@ func (s *TrieSync) Process(results []SyncResult) (bool, int, error) {
 		// If the item was not requested, bail out
 		request := s.requests[item.Hash]
 		if request == nil {
-<<<<<<< HEAD
-			return i, ErrNotRequested
-=======
 			return committed, i, ErrNotRequested
->>>>>>> upstream/master
 		}
 		// If the item is a raw entry request, commit directly
 		if request.raw {
@@ -170,11 +162,7 @@ func (s *TrieSync) Process(results []SyncResult) (bool, int, error) {
 			continue
 		}
 		// Decode the node data content and update the request
-<<<<<<< HEAD
-		node, err := decodeNode(item.Hash[:], item.Data)
-=======
 		node, err := decodeNode(item.Hash[:], item.Data, 0)
->>>>>>> upstream/master
 		if err != nil {
 			return committed, i, err
 		}
@@ -227,31 +215,17 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 	}
 	children := []child{}
 
-<<<<<<< HEAD
-	switch node := (*req.object).(type) {
-	case *shortNode:
-		node = node.copy() // Prevents linking all downloaded nodes together.
-=======
 	switch node := (object).(type) {
 	case *shortNode:
->>>>>>> upstream/master
 		children = []child{{
 			node:  node.Val,
 			depth: req.depth + len(node.Key),
 		}}
 	case *fullNode:
-<<<<<<< HEAD
-		node = node.copy()
-		for i := 0; i < 17; i++ {
-			if node.Children[i] != nil {
-				children = append(children, child{
-					node:  &node.Children[i],
-=======
 		for i := 0; i < 17; i++ {
 			if node.Children[i] != nil {
 				children = append(children, child{
 					node:  node.Children[i],
->>>>>>> upstream/master
 					depth: req.depth + 1,
 				})
 			}
@@ -274,12 +248,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 		if node, ok := (child.node).(hashNode); ok {
 			// Try to resolve the node from the local database
 			blob, _ := s.database.Get(node)
-<<<<<<< HEAD
-			if local, err := decodeNode(node[:], blob); local != nil && err == nil {
-				*child.node = local
-=======
 			if local, err := decodeNode(node[:], blob, 0); local != nil && err == nil {
->>>>>>> upstream/master
 				continue
 			}
 			// Locally unknown node, schedule for retrieval

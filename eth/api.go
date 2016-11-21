@@ -412,7 +412,7 @@ func (api *PrivateDebugAPI) traceBlock(block *types.Block, logConfig *vm.LogConf
 		return false, structLogger.StructLogs(), err
 	}
 
-	receipts, _, usedGas, err := processor.Process(block, statedb, config)
+	receipts, _, usedGas, _, err := processor.Process(block, statedb, config)
 	if err != nil {
 		return false, structLogger.StructLogs(), err
 	}
@@ -517,8 +517,8 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.
 		}
 		// Mutate the state if we haven't reached the tracing transaction yet
 		if uint64(idx) < txIndex {
-			vmenv := core.NewEnv(stateDb, api.config, api.eth.BlockChain(), msg, block.Header(), vm.Config{})
-			_, _, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas()))
+			vmenv := core.NewEnv(stateDb, api.config, api.eth.BlockChain(), msg, block.Header(), tx.Hash(), vm.Config{})
+			_, _, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas()), &core.TxExecReport{})
 			if err != nil {
 				return nil, fmt.Errorf("mutation failed: %v", err)
 			}
@@ -526,8 +526,8 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.
 			continue
 		}
 		// Otherwise trace the transaction and return
-		vmenv := core.NewEnv(stateDb, api.config, api.eth.BlockChain(), msg, block.Header(), vm.Config{Debug: true, Tracer: tracer})
-		ret, gas, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas()))
+		vmenv := core.NewEnv(stateDb, api.config, api.eth.BlockChain(), msg, block.Header(), tx.Hash(), vm.Config{Debug: true, Tracer: tracer})
+		ret, gas, err := core.ApplyMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas()), &core.TxExecReport{})
 		if err != nil {
 			return nil, fmt.Errorf("tracing failed: %v", err)
 		}

@@ -115,14 +115,16 @@ type blockChain interface {
 	HasHeader(hash common.Hash) bool
 	HasBlock(hash common.Hash) bool
 	HasBlockAndState(hash common.Hash) bool
-	GetHeader(hash common.Hash) *types.Header
-	GetHeaderByNumber(number uint64) *types.Header
-	GetBlock(hash common.Hash) *types.Block
-	GetBlockByNumber(number uint64) *types.Block
+	GetHeader(hash common.Hash, n uint64) *types.Header
+	GetHeaderByNumber(n uint64) *types.Header
+	GetHeaderByHash(hash common.Hash) *types.Header
+	GetBlock(hash common.Hash, n uint64) *types.Block
+	GetBlockByHash(hash common.Hash) *types.Block
 	GetBlockHashesFromHash(hash common.Hash, max uint64) []common.Hash
 	GetBodyRLP(hash common.Hash) rlp.RawValue
 	FastSyncCommitHead(hash common.Hash) error
-	GetTd(hash common.Hash) *big.Int
+	GetTd(hash common.Hash, n uint64) *big.Int
+	GetTdByHash(hash common.Hash) *big.Int
 	InsertHeaderChain(chain []*types.Header, checkFreq int) (int, error)
 	InsertChain(chain types.Blocks) (int, error)
 	InsertReceiptChain(blockChain types.Blocks, receiptChain []types.Receipts) (int, error)

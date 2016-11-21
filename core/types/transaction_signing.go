@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/matthieu/go-ethereum/common"
+	"github.com/matthieu/go-ethereum/crypto"
+	"github.com/matthieu/go-ethereum/params"
 )
 
 var ErrInvalidChainId = errors.New("invalid chaid id for signer")
@@ -93,7 +93,7 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 
 // SignatureValues returns the ECDSA signature values contained in the transaction.
 func SignatureValues(signer Signer, tx *Transaction) (v byte, r *big.Int, s *big.Int) {
-	return normaliseV(signer, tx.data.V), new(big.Int).Set(tx.data.R), new(big.Int).Set(tx.data.S)
+	return normaliseV(signer, tx.Dat.V), new(big.Int).Set(tx.Dat.R), new(big.Int).Set(tx.Dat.S)
 }
 
 type Signer interface {
@@ -143,13 +143,13 @@ func (s EIP155Signer) PublicKey(tx *Transaction) ([]byte, error) {
 		return nil, ErrInvalidChainId
 	}
 
-	V := normaliseV(s, tx.data.V)
-	if !crypto.ValidateSignatureValues(V, tx.data.R, tx.data.S, true) {
+	V := normaliseV(s, tx.Dat.V)
+	if !crypto.ValidateSignatureValues(V, tx.Dat.R, tx.Dat.S, true) {
 		return nil, ErrInvalidSig
 	}
 
 	// encode the signature in uncompressed format
-	R, S := tx.data.R.Bytes(), tx.data.S.Bytes()
+	R, S := tx.Dat.R.Bytes(), tx.Dat.S.Bytes()
 	sig := make([]byte, 65)
 	copy(sig[32-len(R):32], R)
 	copy(sig[64-len(S):64], S)
@@ -174,13 +174,13 @@ func (s EIP155Signer) WithSignature(tx *Transaction, sig []byte) (*Transaction, 
 		panic(fmt.Sprintf("wrong size for snature: got %d, want 65", len(sig)))
 	}
 
-	cpy := &Transaction{data: tx.data}
-	cpy.data.R = new(big.Int).SetBytes(sig[:32])
-	cpy.data.S = new(big.Int).SetBytes(sig[32:64])
-	cpy.data.V = new(big.Int).SetBytes([]byte{sig[64]})
+	cpy := &Transaction{Dat: tx.Dat}
+	cpy.Dat.R = new(big.Int).SetBytes(sig[:32])
+	cpy.Dat.S = new(big.Int).SetBytes(sig[32:64])
+	cpy.Dat.V = new(big.Int).SetBytes([]byte{sig[64]})
 	if s.chainId.BitLen() > 0 {
-		cpy.data.V = big.NewInt(int64(sig[64] - 27 + 35))
-		cpy.data.V.Add(cpy.data.V, s.chainIdMul)
+		cpy.Dat.V = big.NewInt(int64(sig[64] - 27 + 35))
+		cpy.Dat.V.Add(cpy.Dat.V, s.chainIdMul)
 	}
 	return cpy, nil
 }
@@ -189,12 +189,12 @@ func (s EIP155Signer) WithSignature(tx *Transaction, sig []byte) (*Transaction, 
 // It does not uniquely identify the transaction.
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
-		tx.data.AccountNonce,
-		tx.data.Price,
-		tx.data.GasLimit,
-		tx.data.Recipient,
-		tx.data.Amount,
-		tx.data.Payload,
+		tx.Dat.AccountNonce,
+		tx.Dat.Price,
+		tx.Dat.GasLimit,
+		tx.Dat.Recipient,
+		tx.Dat.Amount,
+		tx.Dat.Payload,
 		s.chainId, uint(0), uint(0),
 	})
 }
@@ -223,10 +223,10 @@ func (hs HomesteadSigner) WithSignature(tx *Transaction, sig []byte) (*Transacti
 	if len(sig) != 65 {
 		panic(fmt.Sprintf("wrong size for snature: got %d, want 65", len(sig)))
 	}
-	cpy := &Transaction{data: tx.data}
-	cpy.data.R = new(big.Int).SetBytes(sig[:32])
-	cpy.data.S = new(big.Int).SetBytes(sig[32:64])
-	cpy.data.V = new(big.Int).SetBytes([]byte{sig[64]})
+	cpy := &Transaction{Dat: tx.Dat}
+	cpy.Dat.R = new(big.Int).SetBytes(sig[:32])
+	cpy.Dat.S = new(big.Int).SetBytes(sig[32:64])
+	cpy.Dat.V = new(big.Int).SetBytes([]byte{sig[64]})
 	return cpy, nil
 }
 
@@ -240,15 +240,15 @@ func (hs HomesteadSigner) SignECDSA(tx *Transaction, prv *ecdsa.PrivateKey) (*Tr
 }
 
 func (hs HomesteadSigner) PublicKey(tx *Transaction) ([]byte, error) {
-	if tx.data.V.BitLen() > 8 {
+	if tx.Dat.V.BitLen() > 8 {
 		return nil, ErrInvalidSig
 	}
-	V := byte(tx.data.V.Uint64())
-	if !crypto.ValidateSignatureValues(V, tx.data.R, tx.data.S, true) {
+	V := byte(tx.Dat.V.Uint64())
+	if !crypto.ValidateSignatureValues(V, tx.Dat.R, tx.Dat.S, true) {
 		return nil, ErrInvalidSig
 	}
 	// encode the snature in uncompressed format
-	r, s := tx.data.R.Bytes(), tx.data.S.Bytes()
+	r, s := tx.Dat.R.Bytes(), tx.Dat.S.Bytes()
 	sig := make([]byte, 65)
 	copy(sig[32-len(r):32], r)
 	copy(sig[64-len(s):64], s)
@@ -279,10 +279,10 @@ func (fs FrontierSigner) WithSignature(tx *Transaction, sig []byte) (*Transactio
 	if len(sig) != 65 {
 		panic(fmt.Sprintf("wrong size for snature: got %d, want 65", len(sig)))
 	}
-	cpy := &Transaction{data: tx.data}
-	cpy.data.R = new(big.Int).SetBytes(sig[:32])
-	cpy.data.S = new(big.Int).SetBytes(sig[32:64])
-	cpy.data.V = new(big.Int).SetBytes([]byte{sig[64]})
+	cpy := &Transaction{Dat: tx.Dat}
+	cpy.Dat.R = new(big.Int).SetBytes(sig[:32])
+	cpy.Dat.S = new(big.Int).SetBytes(sig[32:64])
+	cpy.Dat.V = new(big.Int).SetBytes([]byte{sig[64]})
 	return cpy, nil
 }
 
@@ -299,26 +299,26 @@ func (fs FrontierSigner) SignECDSA(tx *Transaction, prv *ecdsa.PrivateKey) (*Tra
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
-		tx.data.AccountNonce,
-		tx.data.Price,
-		tx.data.GasLimit,
-		tx.data.Recipient,
-		tx.data.Amount,
-		tx.data.Payload,
+		tx.Dat.AccountNonce,
+		tx.Dat.Price,
+		tx.Dat.GasLimit,
+		tx.Dat.Recipient,
+		tx.Dat.Amount,
+		tx.Dat.Payload,
 	})
 }
 
 func (fs FrontierSigner) PublicKey(tx *Transaction) ([]byte, error) {
-	if tx.data.V.BitLen() > 8 {
+	if tx.Dat.V.BitLen() > 8 {
 		return nil, ErrInvalidSig
 	}
 
-	V := byte(tx.data.V.Uint64())
-	if !crypto.ValidateSignatureValues(V, tx.data.R, tx.data.S, false) {
+	V := byte(tx.Dat.V.Uint64())
+	if !crypto.ValidateSignatureValues(V, tx.Dat.R, tx.Dat.S, false) {
 		return nil, ErrInvalidSig
 	}
 	// encode the snature in uncompressed format
-	r, s := tx.data.R.Bytes(), tx.data.S.Bytes()
+	r, s := tx.Dat.R.Bytes(), tx.Dat.S.Bytes()
 	sig := make([]byte, 65)
 	copy(sig[32-len(r):32], r)
 	copy(sig[64-len(s):64], s)

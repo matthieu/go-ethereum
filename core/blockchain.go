@@ -43,6 +43,7 @@ import (
 	"github.com/matthieu/go-ethereum/core/state"
 	"github.com/matthieu/go-ethereum/core/types"
 	"github.com/matthieu/go-ethereum/core/vm"
+	"github.com/hashicorp/golang-lru"
 )
 
 var (
@@ -928,7 +929,7 @@ func (self *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 			return i, err
 		}
 		// Process block using the parent state as reference point.
-		receipts, logs, usedGas, err := self.processor.Process(block, self.stateCache, vm.Config{})
+		receipts, logs, usedGas, _, err := self.processor.Process(block, self.stateCache, vm.Config{})
 		if err != nil {
 			reportBlock(block, err)
 			return i, err

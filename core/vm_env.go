@@ -27,7 +27,8 @@ import (
 )
 
 type blockGetter interface {
-	GetBlock(common.Hash) *types.Block
+	GetBlock(common.Hash, uint64) *types.Block
+	GetBlockByHash(common.Hash) *types.Block
 }
 
 // GetHashFn returns a function for which the VM env can query block hashes through

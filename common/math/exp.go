@@ -40,16 +40,5 @@ func Exp(base, exponent *big.Int) *big.Int {
 			word >>= 1
 		}
 	}
-	return result
-}
-
-// GasTable returns the gas table corresponding to the current phase (homestead or homestead reprice).
-//
-// The returned GasTable's fields shouldn't, under any circumstances, be changed.
-func (c *ChainConfig) GasTable(num *big.Int) params.GasTable {
-	if c.HomesteadGasRepriceBlock == nil || num == nil || num.Cmp(c.HomesteadGasRepriceBlock) < 0 {
-		return params.GasTableHomestead
-	}
-
-	return params.GasTableHomesteadGasRepriceFork
+return result
 }

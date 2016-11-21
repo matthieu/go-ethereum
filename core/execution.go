@@ -146,7 +146,7 @@ func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPric
 	var inttx *types.InternalTransaction
 	if env.Depth() > 0 {
 		inttx = types.NewInternalTransaction(
-			nonce, gasPrice, gas, caller.Address(), *addr, value, code, "create")
+			nonce, gasPrice, gas, caller.Address(), addr, value, code, "create")
 		env.AddInternalTransaction(inttx)
 	}
 
@@ -206,18 +206,19 @@ func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address
 		to       = env.Db().GetAccount(caller.Address())
 	)
 
+	// Iinitialise a new contract and make initialise the delegate values
+	contract := vm.NewContract(caller, to, caller.Value(), gas, gasPrice).AsDelegate()
+	code := env.Db().GetCode(addr)
+	contract.SetCallCode(&addr, env.Db().GetCodeHash(addr), code)
+	defer contract.Finalise()
+
 	var inttx *types.InternalTransaction
 	if env.Depth() > 0 {
 		nonce := env.Db().GetNonce(caller.Address())
 		inttx = types.NewInternalTransaction(
-			nonce, gasPrice, gas, caller.Address(), *addr, value, code, "call")
+			nonce, gasPrice, gas, caller.Address(), addr, caller.Value(), code, "call")
 		env.AddInternalTransaction(inttx)
 	}
-
-	// Iinitialise a new contract and make initialise the delegate values
-	contract := vm.NewContract(caller, to, caller.Value(), gas, gasPrice).AsDelegate()
-	contract.SetCallCode(&addr, env.Db().GetCodeHash(addr), env.Db().GetCode(addr))
-	defer contract.Finalise()
 
 	ret, err = env.Vm().Run(contract, input)
 	if err != nil {
