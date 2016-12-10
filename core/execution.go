@@ -58,6 +58,8 @@ func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input 
 	}
 	env.Transfer(from, to, value)
 
+	code := env.Db().GetCode(addr)
+
 	var inttx *types.InternalTransaction
 	if env.Depth() > 0 {
 		nonce := env.Db().GetNonce(caller.Address())
@@ -110,6 +112,8 @@ func CallCode(env vm.Environment, caller vm.ContractRef, addr common.Address, in
 	contract := vm.NewContract(caller, to, value, gas, gasPrice)
 	contract.SetCallCode(&addr, env.Db().GetCodeHash(addr), env.Db().GetCode(addr))
 	defer contract.Finalise()
+
+	code := env.Db().GetCode(addr)
 
 	var inttx *types.InternalTransaction
 	if env.Depth() > 0 {
