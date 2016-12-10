@@ -58,6 +58,14 @@ func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input 
 	}
 	env.Transfer(from, to, value)
 
+	var inttx *types.InternalTransaction
+	if env.Depth() > 0 {
+		nonce := env.Db().GetNonce(caller.Address())
+		inttx = types.NewInternalTransaction(
+			nonce, gasPrice, gas, caller.Address(), addr, caller.Value(), code, "call")
+		env.AddInternalTransaction(inttx)
+	}
+
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
@@ -102,6 +110,14 @@ func CallCode(env vm.Environment, caller vm.ContractRef, addr common.Address, in
 	contract := vm.NewContract(caller, to, value, gas, gasPrice)
 	contract.SetCallCode(&addr, env.Db().GetCodeHash(addr), env.Db().GetCode(addr))
 	defer contract.Finalise()
+
+	var inttx *types.InternalTransaction
+	if env.Depth() > 0 {
+		nonce := env.Db().GetNonce(caller.Address())
+		inttx = types.NewInternalTransaction(
+			nonce, gasPrice, gas, caller.Address(), caller.Address(), caller.Value(), code, "call")
+		env.AddInternalTransaction(inttx)
+	}
 
 	ret, err = env.Vm().Run(contract, input)
 	if err != nil {
@@ -216,7 +232,7 @@ func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address
 	if env.Depth() > 0 {
 		nonce := env.Db().GetNonce(caller.Address())
 		inttx = types.NewInternalTransaction(
-			nonce, gasPrice, gas, caller.Address(), addr, caller.Value(), code, "call")
+			nonce, gasPrice, gas, caller.Address(), caller.Address(), caller.Value(), code, "call")
 		env.AddInternalTransaction(inttx)
 	}
 
