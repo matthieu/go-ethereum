@@ -44,6 +44,10 @@ func (rdb *RawLDB) WriteBatch(batch *RawLDBBatch, sync bool) error {
 	return nil
 }
 
+func (rdb *RawLDB) CompactAll() error {
+	return rdb.DB.CompactRange(util.Range{})
+}
+
 type RawLDBBatch struct {
 	*leveldb.Batch
 }
