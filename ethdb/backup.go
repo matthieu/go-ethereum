@@ -8,7 +8,9 @@ import (
 )
 
 // This file contains the methods and interfaces used to support the backup
-// mechanism on the eth state server without having to deal with vendoring
+// mechanism on the eth state server without having to deal with vendoring.
+// Many of the leveldb database object's methods require custom option types
+// which result in ugly vendored types.
 
 type LDBIter interface {
 	iterator.Iterator
@@ -35,6 +37,12 @@ type RawLDB struct {
 func OpenNewRawLDB(fileName string) (*RawLDB, error) {
 	db, err := leveldb.OpenFile(fileName, &opt.Options{ErrorIfExist: true})
 	return &RawLDB{db}, err
+}
+
+// Clone of underlying Put, but without the write options. Sync is set by a
+// bool
+func (rdb *RawLDB) Put(key, value []byte, sync bool) error {
+	return rdb.DB.Put(key, value, &opt.WriteOptions{Sync: sync})
 }
 
 func (rdb *RawLDB) WriteBatch(batch *RawLDBBatch, sync bool) error {
