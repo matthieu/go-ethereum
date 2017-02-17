@@ -34,8 +34,12 @@ type RawLDB struct {
 }
 
 // Open a LDB, errors if new.
+// Using similar settings to eth's own internal ldb
 func OpenNewRawLDB(fileName string) (*RawLDB, error) {
-	db, err := leveldb.OpenFile(fileName, &opt.Options{ErrorIfExist: true})
+	db, err := leveldb.OpenFile(fileName, &opt.Options{
+		ErrorIfExist:       true,
+		BlockCacheCapacity: 32 * opt.MiB,
+		WriteBuffer:        32 * opt.MiB})
 	return &RawLDB{db}, err
 }
 
