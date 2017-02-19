@@ -38,8 +38,8 @@ type RawLDB struct {
 func OpenNewRawLDB(fileName string) (*RawLDB, error) {
 	db, err := leveldb.OpenFile(fileName, &opt.Options{
 		ErrorIfExist:       true,
-		BlockCacheCapacity: 32 * opt.MiB,
-		WriteBuffer:        32 * opt.MiB})
+		BlockCacheCapacity: 48 * opt.MiB,
+		WriteBuffer:        48 * opt.MiB})
 	return &RawLDB{db}, err
 }
 
