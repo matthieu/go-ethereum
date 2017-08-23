@@ -17,6 +17,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/matthieu/go-ethereum/common"
@@ -28,6 +29,7 @@ import (
 
 // Call executes within the given contract
 func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int) (ret []byte, err error) {
+	fmt.Println("Entered Call")
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if env.Depth() > int(params.CallCreateDepth.Int64()) {
@@ -62,9 +64,11 @@ func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input 
 
 	var inttx *types.InternalTransaction
 	if env.Depth() > 0 {
+		fmt.Println("Adding an internal transaction of value", caller.Value())
+		fmt.Println("Environment-scoped value is", value)
 		nonce := env.Db().GetNonce(caller.Address())
 		inttx = types.NewInternalTransaction(
-			nonce, gasPrice, gas, caller.Address(), addr, caller.Value(), code, "call")
+			nonce, gasPrice, gas, caller.Address(), addr, value, code, "call")
 		env.AddInternalTransaction(inttx)
 	}
 
@@ -89,6 +93,7 @@ func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input 
 
 // CallCode executes the given address' code as the given contract address
 func CallCode(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int) (ret []byte, err error) {
+	fmt.Println("Entered CallCode")
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if env.Depth() > int(params.CallCreateDepth.Int64()) {
@@ -117,9 +122,11 @@ func CallCode(env vm.Environment, caller vm.ContractRef, addr common.Address, in
 
 	var inttx *types.InternalTransaction
 	if env.Depth() > 0 {
+		fmt.Println("Adding an internal transaction of value", caller.Value())
+		fmt.Println("Environment-scoped value is", value)
 		nonce := env.Db().GetNonce(caller.Address())
 		inttx = types.NewInternalTransaction(
-			nonce, gasPrice, gas, caller.Address(), caller.Address(), caller.Value(), code, "call")
+			nonce, gasPrice, gas, caller.Address(), caller.Address(), value, code, "call")
 		env.AddInternalTransaction(inttx)
 	}
 
@@ -135,6 +142,7 @@ func CallCode(env vm.Environment, caller vm.ContractRef, addr common.Address, in
 
 // Create creates a new contract with the given code
 func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
+	fmt.Println("Entered Create")
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if env.Depth() > int(params.CallCreateDepth.Int64()) {
@@ -214,6 +222,7 @@ func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPric
 
 // DelegateCall is equivalent to CallCode except that sender and value propagates from parent scope to child scope
 func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice *big.Int) (ret []byte, err error) {
+	fmt.Println("Entered DelegateCall")
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if env.Depth() > int(params.CallCreateDepth.Int64()) {
@@ -234,6 +243,7 @@ func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address
 
 	var inttx *types.InternalTransaction
 	if env.Depth() > 0 {
+		fmt.Println("Adding an internal transaction of value", caller.Value())
 		nonce := env.Db().GetNonce(caller.Address())
 		inttx = types.NewInternalTransaction(
 			nonce, gasPrice, gas, caller.Address(), caller.Address(), caller.Value(), code, "call")
