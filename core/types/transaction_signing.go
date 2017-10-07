@@ -27,7 +27,9 @@ import (
 	"github.com/matthieu/go-ethereum/params"
 )
 
-var ErrInvalidChainId = errors.New("invalid chaid id for signer")
+var (
+	ErrInvalidChainId = errors.New("invalid chain id for signer")
+)
 
 // sigCache is used to cache the derived sender and contains
 // the signer used to derive it.
@@ -50,18 +52,15 @@ func MakeSigner(config *params.ChainConfig, blockNumber *big.Int) Signer {
 	return signer
 }
 
-// SignECDSA signs the transaction using the given signer and private key
-func SignECDSA(s Signer, tx *Transaction, prv *ecdsa.PrivateKey) (*Transaction, error) {
+// SignTx signs the transaction using the given signer and private key
+func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, error) {
 	h := s.Hash(tx)
-	sig, err := crypto.SignEthereum(h[:], prv)
+	sig, err := crypto.Sign(h[:], prv)
 	if err != nil {
 		return nil, err
 	}
-	return s.WithSignature(tx, sig)
+	return tx.WithSignature(s, sig)
 }
-
-// Sender derives the sender from the tx using the signer derivation
-// functions.
 
 // Sender returns the address derived from the signature (V, R, S) using secp256k1
 // elliptic curve and an error if it failed deriving or upon an incorrect
@@ -81,43 +80,37 @@ func Sender(signer Signer, tx *Transaction) (common.Address, error) {
 		}
 	}
 
-	pubkey, err := signer.PublicKey(tx)
+	addr, err := signer.Sender(tx)
 	if err != nil {
 		return common.Address{}, err
 	}
-	var addr common.Address
-	copy(addr[:], crypto.Keccak256(pubkey[1:])[12:])
 	tx.from.Store(sigCache{signer: signer, from: addr})
 	return addr, nil
 }
 
-// SignatureValues returns the ECDSA signature values contained in the transaction.
-func SignatureValues(signer Signer, tx *Transaction) (v byte, r *big.Int, s *big.Int) {
-	return normaliseV(signer, tx.Dat.V), new(big.Int).Set(tx.Dat.R), new(big.Int).Set(tx.Dat.S)
-}
-
+// Signer encapsulates transaction signature handling. Note that this interface is not a
+// stable API and may change at any time to accommodate new protocol rules.
 type Signer interface {
-	// Hash returns the rlp encoded hash for signatures
+	// Sender returns the sender address of the transaction.
+	Sender(tx *Transaction) (common.Address, error)
+	// SignatureValues returns the raw R, S, V values corresponding to the
+	// given signature.
+	SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error)
+	// Hash returns the hash to be signed.
 	Hash(tx *Transaction) common.Hash
-	// PubilcKey returns the public key derived from the signature
-	PublicKey(tx *Transaction) ([]byte, error)
-	// SignECDSA signs the transaction with the given and returns a copy of the tx
-	SignECDSA(tx *Transaction, prv *ecdsa.PrivateKey) (*Transaction, error)
-	// WithSignature returns a copy of the transaction with the given signature
-	WithSignature(tx *Transaction, sig []byte) (*Transaction, error)
-	// Checks for equality on the signers
+	// Equal returns true if the given signer is the same as the receiver.
 	Equal(Signer) bool
 }
 
-// EIP155Transaction implements TransactionInterface using the
-// EIP155 rules
+// EIP155Transaction implements Signer using the EIP155 rules.
 type EIP155Signer struct {
-	HomesteadSigner
-
 	chainId, chainIdMul *big.Int
 }
 
 func NewEIP155Signer(chainId *big.Int) EIP155Signer {
+	if chainId == nil {
+		chainId = new(big.Int)
+	}
 	return EIP155Signer{
 		chainId:    chainId,
 		chainIdMul: new(big.Int).Mul(chainId, big.NewInt(2)),
@@ -129,60 +122,32 @@ func (s EIP155Signer) Equal(s2 Signer) bool {
 	return ok && eip155.chainId.Cmp(s.chainId) == 0
 }
 
-func (s EIP155Signer) SignECDSA(tx *Transaction, prv *ecdsa.PrivateKey) (*Transaction, error) {
-	return SignECDSA(s, tx, prv)
-}
+var big8 = big.NewInt(8)
 
-func (s EIP155Signer) PublicKey(tx *Transaction) ([]byte, error) {
-	// if the transaction is not protected fall back to homestead signer
+func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	if !tx.Protected() {
-		return (HomesteadSigner{}).PublicKey(tx)
+		return HomesteadSigner{}.Sender(tx)
 	}
-
 	if tx.ChainId().Cmp(s.chainId) != 0 {
-		return nil, ErrInvalidChainId
+		return common.Address{}, ErrInvalidChainId
 	}
-
-	V := normaliseV(s, tx.Dat.V)
-	if !crypto.ValidateSignatureValues(V, tx.Dat.R, tx.Dat.S, true) {
-		return nil, ErrInvalidSig
-	}
-
-	// encode the signature in uncompressed format
-	R, S := tx.Dat.R.Bytes(), tx.Dat.S.Bytes()
-	sig := make([]byte, 65)
-	copy(sig[32-len(R):32], R)
-	copy(sig[64-len(S):64], S)
-	sig[64] = V - 27
-
-	// recover the public key from the signature
-	hash := s.Hash(tx)
-	pub, err := crypto.Ecrecover(hash[:], sig)
-	if err != nil {
-		return nil, err
-	}
-	if len(pub) == 0 || pub[0] != 4 {
-		return nil, errors.New("invalid public key")
-	}
-	return pub, nil
+	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
+	V.Sub(V, big8)
+	return recoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V, true)
 }
 
-// WithSignature returns a new transaction with the given signature.
-// This signature needs to be formatted as described in the yellow paper (v+27).
-func (s EIP155Signer) WithSignature(tx *Transaction, sig []byte) (*Transaction, error) {
-	if len(sig) != 65 {
-		panic(fmt.Sprintf("wrong size for snature: got %d, want 65", len(sig)))
+// WithSignature returns a new transaction with the given signature. This signature
+// needs to be in the [R || S || V] format where V is 0 or 1.
+func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
+	R, S, V, err = HomesteadSigner{}.SignatureValues(tx, sig)
+	if err != nil {
+		return nil, nil, nil, err
 	}
-
-	cpy := &Transaction{Dat: tx.Dat}
-	cpy.Dat.R = new(big.Int).SetBytes(sig[:32])
-	cpy.Dat.S = new(big.Int).SetBytes(sig[32:64])
-	cpy.Dat.V = new(big.Int).SetBytes([]byte{sig[64]})
-	if s.chainId.BitLen() > 0 {
-		cpy.Dat.V = big.NewInt(int64(sig[64] - 27 + 35))
-		cpy.Dat.V.Add(cpy.Dat.V, s.chainIdMul)
+	if s.chainId.Sign() != 0 {
+		V = big.NewInt(int64(sig[64] + 35))
+		V.Add(V, s.chainIdMul)
 	}
-	return cpy, nil
+	return R, S, V, nil
 }
 
 // Hash returns the hash to be signed by the sender.
@@ -199,15 +164,6 @@ func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 	})
 }
 
-func (s EIP155Signer) SigECDSA(tx *Transaction, prv *ecdsa.PrivateKey) (*Transaction, error) {
-	h := s.Hash(tx)
-	sig, err := crypto.SignEthereum(h[:], prv)
-	if err != nil {
-		return nil, err
-	}
-	return s.WithSignature(tx, sig)
-}
-
 // HomesteadTransaction implements TransactionInterface using the
 // homestead rules.
 type HomesteadSigner struct{ FrontierSigner }
@@ -217,53 +173,14 @@ func (s HomesteadSigner) Equal(s2 Signer) bool {
 	return ok
 }
 
-// WithSignature returns a new transaction with the given snature.
-// This snature needs to be formatted as described in the yellow paper (v+27).
-func (hs HomesteadSigner) WithSignature(tx *Transaction, sig []byte) (*Transaction, error) {
-	if len(sig) != 65 {
-		panic(fmt.Sprintf("wrong size for snature: got %d, want 65", len(sig)))
-	}
-	cpy := &Transaction{Dat: tx.Dat}
-	cpy.Dat.R = new(big.Int).SetBytes(sig[:32])
-	cpy.Dat.S = new(big.Int).SetBytes(sig[32:64])
-	cpy.Dat.V = new(big.Int).SetBytes([]byte{sig[64]})
-	return cpy, nil
+// SignatureValues returns signature values. This signature
+// needs to be in the [R || S || V] format where V is 0 or 1.
+func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error) {
+	return hs.FrontierSigner.SignatureValues(tx, sig)
 }
 
-func (hs HomesteadSigner) SignECDSA(tx *Transaction, prv *ecdsa.PrivateKey) (*Transaction, error) {
-	h := hs.Hash(tx)
-	sig, err := crypto.SignEthereum(h[:], prv)
-	if err != nil {
-		return nil, err
-	}
-	return hs.WithSignature(tx, sig)
-}
-
-func (hs HomesteadSigner) PublicKey(tx *Transaction) ([]byte, error) {
-	if tx.Dat.V.BitLen() > 8 {
-		return nil, ErrInvalidSig
-	}
-	V := byte(tx.Dat.V.Uint64())
-	if !crypto.ValidateSignatureValues(V, tx.Dat.R, tx.Dat.S, true) {
-		return nil, ErrInvalidSig
-	}
-	// encode the snature in uncompressed format
-	r, s := tx.Dat.R.Bytes(), tx.Dat.S.Bytes()
-	sig := make([]byte, 65)
-	copy(sig[32-len(r):32], r)
-	copy(sig[64-len(s):64], s)
-	sig[64] = V - 27
-
-	// recover the public key from the snature
-	hash := hs.Hash(tx)
-	pub, err := crypto.Ecrecover(hash[:], sig)
-	if err != nil {
-		return nil, err
-	}
-	if len(pub) == 0 || pub[0] != 4 {
-		return nil, errors.New("invalid public key")
-	}
-	return pub, nil
+func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
+	return recoverPlain(hs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, true)
 }
 
 type FrontierSigner struct{}
@@ -273,29 +190,19 @@ func (s FrontierSigner) Equal(s2 Signer) bool {
 	return ok
 }
 
-// WithSignature returns a new transaction with the given snature.
-// This snature needs to be formatted as described in the yellow paper (v+27).
-func (fs FrontierSigner) WithSignature(tx *Transaction, sig []byte) (*Transaction, error) {
+// SignatureValues returns signature values. This signature
+// needs to be in the [R || S || V] format where V is 0 or 1.
+func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error) {
 	if len(sig) != 65 {
-		panic(fmt.Sprintf("wrong size for snature: got %d, want 65", len(sig)))
+		panic(fmt.Sprintf("wrong size for signature: got %d, want 65", len(sig)))
 	}
-	cpy := &Transaction{Dat: tx.Dat}
-	cpy.Dat.R = new(big.Int).SetBytes(sig[:32])
-	cpy.Dat.S = new(big.Int).SetBytes(sig[32:64])
-	cpy.Dat.V = new(big.Int).SetBytes([]byte{sig[64]})
-	return cpy, nil
+	r = new(big.Int).SetBytes(sig[:32])
+	s = new(big.Int).SetBytes(sig[32:64])
+	v = new(big.Int).SetBytes([]byte{sig[64] + 27})
+	return r, s, v, nil
 }
 
-func (fs FrontierSigner) SignECDSA(tx *Transaction, prv *ecdsa.PrivateKey) (*Transaction, error) {
-	h := fs.Hash(tx)
-	sig, err := crypto.SignEthereum(h[:], prv)
-	if err != nil {
-		return nil, err
-	}
-	return fs.WithSignature(tx, sig)
-}
-
-// Hash returns the hash to be sned by the sender.
+// Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
@@ -308,44 +215,35 @@ func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 	})
 }
 
-func (fs FrontierSigner) PublicKey(tx *Transaction) ([]byte, error) {
-	if tx.Dat.V.BitLen() > 8 {
-		return nil, ErrInvalidSig
-	}
+func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
+	return recoverPlain(fs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, false)
+}
 
-	V := byte(tx.Dat.V.Uint64())
-	if !crypto.ValidateSignatureValues(V, tx.Dat.R, tx.Dat.S, false) {
-		return nil, ErrInvalidSig
+func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
+	if Vb.BitLen() > 8 {
+		return common.Address{}, ErrInvalidSig
+	}
+	V := byte(Vb.Uint64() - 27)
+	if !crypto.ValidateSignatureValues(V, R, S, homestead) {
+		return common.Address{}, ErrInvalidSig
 	}
 	// encode the snature in uncompressed format
-	r, s := tx.Dat.R.Bytes(), tx.Dat.S.Bytes()
+	r, s := R.Bytes(), S.Bytes()
 	sig := make([]byte, 65)
 	copy(sig[32-len(r):32], r)
 	copy(sig[64-len(s):64], s)
-	sig[64] = V - 27
-
+	sig[64] = V
 	// recover the public key from the snature
-	hash := fs.Hash(tx)
-	pub, err := crypto.Ecrecover(hash[:], sig)
+	pub, err := crypto.Ecrecover(sighash[:], sig)
 	if err != nil {
-		return nil, err
+		return common.Address{}, err
 	}
 	if len(pub) == 0 || pub[0] != 4 {
-		return nil, errors.New("invalid public key")
+		return common.Address{}, errors.New("invalid public key")
 	}
-	return pub, nil
-}
-
-// normaliseV returns the Ethereum version of the V parameter
-func normaliseV(s Signer, v *big.Int) byte {
-	if s, ok := s.(EIP155Signer); ok {
-		stdV := v.BitLen() <= 8 && (v.Uint64() == 27 || v.Uint64() == 28)
-		if s.chainId.BitLen() > 0 && !stdV {
-			nv := byte((new(big.Int).Sub(v, s.chainIdMul).Uint64()) - 35 + 27)
-			return nv
-		}
-	}
-	return byte(v.Uint64())
+	var addr common.Address
+	copy(addr[:], crypto.Keccak256(pub[1:])[12:])
+	return addr, nil
 }
 
 // deriveChainId derives the chain id from the given v parameter

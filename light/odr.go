@@ -19,6 +19,7 @@
 package light
 
 import (
+	"context"
 	"math/big"
 
 	"github.com/matthieu/go-ethereum/common"
@@ -27,14 +28,13 @@ import (
 	"github.com/matthieu/go-ethereum/crypto"
 	"github.com/matthieu/go-ethereum/ethdb"
 	"github.com/matthieu/go-ethereum/rlp"
-	"golang.org/x/net/context"
 )
 
 // NoOdr is the default context passed to an ODR capable function when the ODR
 // service is not required.
 var NoOdr = context.Background()
 
-// OdrBackend is an interface to a backend service that handles ODR retrievals
+// OdrBackend is an interface to a backend service that handles ODR retrievals type
 type OdrBackend interface {
 	Database() ethdb.Database
 	Retrieve(ctx context.Context, req OdrRequest) error
@@ -48,6 +48,7 @@ type OdrRequest interface {
 // TrieID identifies a state or account storage trie
 type TrieID struct {
 	BlockHash, Root common.Hash
+	BlockNumber     uint64
 	AccKey          []byte
 }
 
@@ -55,20 +56,22 @@ type TrieID struct {
 // header.
 func StateTrieID(header *types.Header) *TrieID {
 	return &TrieID{
-		BlockHash: header.Hash(),
-		AccKey:    nil,
-		Root:      header.Root,
+		BlockHash:   header.Hash(),
+		BlockNumber: header.Number.Uint64(),
+		AccKey:      nil,
+		Root:        header.Root,
 	}
 }
 
 // StorageTrieID returns a TrieID for a contract storage trie at a given account
 // of a given state trie. It also requires the root hash of the trie for
 // checking Merkle proofs.
-func StorageTrieID(state *TrieID, addr common.Address, root common.Hash) *TrieID {
+func StorageTrieID(state *TrieID, addrHash, root common.Hash) *TrieID {
 	return &TrieID{
-		BlockHash: state.BlockHash,
-		AccKey:    crypto.Keccak256(addr[:]),
-		Root:      root,
+		BlockHash:   state.BlockHash,
+		BlockNumber: state.BlockNumber,
+		AccKey:      addrHash[:],
+		Root:        root,
 	}
 }
 
@@ -99,7 +102,7 @@ func storeProof(db ethdb.Database, proof []rlp.RawValue) {
 // CodeRequest is the ODR request type for retrieving contract code
 type CodeRequest struct {
 	OdrRequest
-	Id   *TrieID
+	Id   *TrieID // references storage trie of the account
 	Hash common.Hash
 	Data []byte
 }

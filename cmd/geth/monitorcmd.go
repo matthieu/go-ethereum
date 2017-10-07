@@ -50,7 +50,7 @@ var (
 		Usage: "Refresh interval in seconds",
 	}
 	monitorCommand = cli.Command{
-		Action:    monitor,
+		Action:    utils.MigrateFlags(monitor), // keep track of migration progress
 		Name:      "monitor",
 		Usage:     "Monitor and visualize node metrics",
 		ArgsUsage: " ",
@@ -237,8 +237,9 @@ func expandMetrics(metrics map[string]interface{}, path string) []string {
 
 // fetchMetric iterates over the metrics map and retrieves a specific one.
 func fetchMetric(metrics map[string]interface{}, metric string) float64 {
-	parts, found := strings.Split(metric, "/"), true
+	parts := strings.Split(metric, "/")
 	for _, part := range parts[:len(parts)-1] {
+		var found bool
 		metrics, found = metrics[part].(map[string]interface{})
 		if !found {
 			return 0

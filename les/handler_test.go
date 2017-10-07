@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
@@ -42,14 +43,15 @@ func expectResponse(r p2p.MsgReader, msgcode, reqID, bv uint64, data interface{}
 func TestGetBlockHeadersLes1(t *testing.T) { testGetBlockHeaders(t, 1) }
 
 func testGetBlockHeaders(t *testing.T, protocol int) {
-	pm, _, _ := newTestProtocolManagerMust(t, false, downloader.MaxHashFetch+15, nil)
+	db, _ := ethdb.NewMemDatabase()
+	pm := newTestProtocolManagerMust(t, false, downloader.MaxHashFetch+15, nil, nil, nil, db)
 	bc := pm.blockchain.(*core.BlockChain)
 	peer, _ := newTestPeer(t, "peer", protocol, pm, true)
 	defer peer.close()
 
 	// Create a "random" unknown hash for testing
 	var unknown common.Hash
-	for i, _ := range unknown {
+	for i := range unknown {
 		unknown[i] = byte(i)
 	}
 	// Create a batch of tests for various scenarios
@@ -170,7 +172,8 @@ func testGetBlockHeaders(t *testing.T, protocol int) {
 func TestGetBlockBodiesLes1(t *testing.T) { testGetBlockBodies(t, 1) }
 
 func testGetBlockBodies(t *testing.T, protocol int) {
-	pm, _, _ := newTestProtocolManagerMust(t, false, downloader.MaxBlockFetch+15, nil)
+	db, _ := ethdb.NewMemDatabase()
+	pm := newTestProtocolManagerMust(t, false, downloader.MaxBlockFetch+15, nil, nil, nil, db)
 	bc := pm.blockchain.(*core.BlockChain)
 	peer, _ := newTestPeer(t, "peer", protocol, pm, true)
 	defer peer.close()
@@ -189,17 +192,17 @@ func testGetBlockBodies(t *testing.T, protocol int) {
 		//{limit + 1, nil, nil, limit},                                  // No more than the possible block count should be returned
 		{0, []common.Hash{bc.Genesis().Hash()}, []bool{true}, 1},      // The genesis block should be retrievable
 		{0, []common.Hash{bc.CurrentBlock().Hash()}, []bool{true}, 1}, // The chains head block should be retrievable
-		{0, []common.Hash{common.Hash{}}, []bool{false}, 0},           // A non existent block should not be returned
+		{0, []common.Hash{{}}, []bool{false}, 0},                      // A non existent block should not be returned
 
 		// Existing and non-existing blocks interleaved should not cause problems
 		{0, []common.Hash{
-			common.Hash{},
+			{},
 			bc.GetBlockByNumber(1).Hash(),
-			common.Hash{},
+			{},
 			bc.GetBlockByNumber(10).Hash(),
-			common.Hash{},
+			{},
 			bc.GetBlockByNumber(100).Hash(),
-			common.Hash{},
+			{},
 		}, []bool{false, true, false, true, false, true, false}, 3},
 	}
 	// Run each of the tests and verify the results against the chain
@@ -246,7 +249,8 @@ func TestGetCodeLes1(t *testing.T) { testGetCode(t, 1) }
 
 func testGetCode(t *testing.T, protocol int) {
 	// Assemble the test environment
-	pm, _, _ := newTestProtocolManagerMust(t, false, 4, testChainGen)
+	db, _ := ethdb.NewMemDatabase()
+	pm := newTestProtocolManagerMust(t, false, 4, testChainGen, nil, nil, db)
 	bc := pm.blockchain.(*core.BlockChain)
 	peer, _ := newTestPeer(t, "peer", protocol, pm, true)
 	defer peer.close()
@@ -278,7 +282,8 @@ func TestGetReceiptLes1(t *testing.T) { testGetReceipt(t, 1) }
 
 func testGetReceipt(t *testing.T, protocol int) {
 	// Assemble the test environment
-	pm, db, _ := newTestProtocolManagerMust(t, false, 4, testChainGen)
+	db, _ := ethdb.NewMemDatabase()
+	pm := newTestProtocolManagerMust(t, false, 4, testChainGen, nil, nil, db)
 	bc := pm.blockchain.(*core.BlockChain)
 	peer, _ := newTestPeer(t, "peer", protocol, pm, true)
 	defer peer.close()
@@ -300,11 +305,12 @@ func testGetReceipt(t *testing.T, protocol int) {
 }
 
 // Tests that trie merkle proofs can be retrieved
-func TestGetProofsLes1(t *testing.T) { testGetReceipt(t, 1) }
+func TestGetProofsLes1(t *testing.T) { testGetProofs(t, 1) }
 
 func testGetProofs(t *testing.T, protocol int) {
 	// Assemble the test environment
-	pm, db, _ := newTestProtocolManagerMust(t, false, 4, testChainGen)
+	db, _ := ethdb.NewMemDatabase()
+	pm := newTestProtocolManagerMust(t, false, 4, testChainGen, nil, nil, db)
 	bc := pm.blockchain.(*core.BlockChain)
 	peer, _ := newTestPeer(t, "peer", protocol, pm, true)
 	defer peer.close()
@@ -312,7 +318,7 @@ func testGetProofs(t *testing.T, protocol int) {
 	var proofreqs []ProofReq
 	var proofs [][]rlp.RawValue
 
-	accounts := []common.Address{testBankAddress, acc1Addr, acc2Addr, common.Address{}}
+	accounts := []common.Address{testBankAddress, acc1Addr, acc2Addr, {}}
 	for i := uint64(0); i <= bc.CurrentBlock().NumberU64(); i++ {
 		header := bc.GetHeaderByNumber(i)
 		root := header.Root
@@ -321,7 +327,7 @@ func testGetProofs(t *testing.T, protocol int) {
 		for _, acc := range accounts {
 			req := ProofReq{
 				BHash: header.Hash(),
-				Key:   acc[:],
+				Key:   crypto.Keccak256(acc[:]),
 			}
 			proofreqs = append(proofreqs, req)
 

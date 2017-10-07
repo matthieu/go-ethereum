@@ -17,13 +17,13 @@
 package bind
 
 import (
+	"context"
 	"errors"
 	"math/big"
 
 	"github.com/matthieu/go-ethereum"
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/core/types"
-	"golang.org/x/net/context"
 )
 
 var (

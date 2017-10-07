@@ -29,12 +29,14 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"io/ioutil"
 	mrand "math/rand"
 	"net"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/golang/snappy"
 	"github.com/matthieu/go-ethereum/crypto"
 	"github.com/matthieu/go-ethereum/crypto/ecies"
 	"github.com/matthieu/go-ethereum/crypto/secp256k1"
@@ -68,6 +70,10 @@ const (
 	// to wait if the connection is known to be bad anyway.
 	discWriteTimeout = 1 * time.Second
 )
+
+// errPlainMessageTooLarge is returned if a decompressed message length exceeds
+// the allowed 24 bits (i.e. length >= 16MB).
+var errPlainMessageTooLarge = errors.New("message length >= 16MB")
 
 // rlpx is the transport protocol used by actual (non-test) connections.
 // It wraps the frame encoder with locks and read/write deadlines.
@@ -128,6 +134,9 @@ func (t *rlpx) doProtoHandshake(our *protoHandshake) (their *protoHandshake, err
 	if err := <-werr; err != nil {
 		return nil, fmt.Errorf("write error: %v", err)
 	}
+	// If the protocol version supports Snappy encoding, upgrade immediately
+	t.rw.snappy = their.Version >= snappyProtocolVersion
+
 	return their, nil
 }
 
@@ -306,7 +315,7 @@ func (h *encHandshake) makeAuthMsg(prv *ecdsa.PrivateKey, token []byte) (*authMs
 		return nil, err
 	}
 	// Generate random keypair to for ECDH.
-	h.randomPrivKey, err = ecies.GenerateKey(rand.Reader, secp256k1.S256(), nil)
+	h.randomPrivKey, err = ecies.GenerateKey(rand.Reader, crypto.S256(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +393,7 @@ func (h *encHandshake) handleAuthMsg(msg *authMsgV4, prv *ecdsa.PrivateKey) erro
 	// Generate random keypair for ECDH.
 	// If a private key is already set, use it instead of generating one (for testing).
 	if h.randomPrivKey == nil {
-		h.randomPrivKey, err = ecies.GenerateKey(rand.Reader, secp256k1.S256(), nil)
+		h.randomPrivKey, err = ecies.GenerateKey(rand.Reader, crypto.S256(), nil)
 		if err != nil {
 			return err
 		}
@@ -432,7 +441,7 @@ func (msg *authMsgV4) decodePlain(input []byte) {
 	n := copy(msg.Signature[:], input)
 	n += shaLen // skip sha3(initiator-ephemeral-pubk)
 	n += copy(msg.InitiatorPubkey[:], input[n:])
-	n += copy(msg.Nonce[:], input[n:])
+	copy(msg.Nonce[:], input[n:])
 	msg.Version = 4
 	msg.gotPlain = true
 }
@@ -440,13 +449,13 @@ func (msg *authMsgV4) decodePlain(input []byte) {
 func (msg *authRespV4) sealPlain(hs *encHandshake) ([]byte, error) {
 	buf := make([]byte, authRespLen)
 	n := copy(buf, msg.RandomPubkey[:])
-	n += copy(buf[n:], msg.Nonce[:])
+	copy(buf[n:], msg.Nonce[:])
 	return ecies.Encrypt(rand.Reader, hs.remotePub, buf, nil, nil)
 }
 
 func (msg *authRespV4) decodePlain(input []byte) {
 	n := copy(msg.RandomPubkey[:], input)
-	n += copy(msg.Nonce[:], input[n:])
+	copy(msg.Nonce[:], input[n:])
 	msg.Version = 4
 }
 
@@ -559,6 +568,8 @@ type rlpxFrameRW struct {
 	macCipher  cipher.Block
 	egressMAC  hash.Hash
 	ingressMAC hash.Hash
+
+	snappy bool
 }
 
 func newRLPXFrameRW(conn io.ReadWriter, s secrets) *rlpxFrameRW {
@@ -586,6 +597,17 @@ func newRLPXFrameRW(conn io.ReadWriter, s secrets) *rlpxFrameRW {
 func (rw *rlpxFrameRW) WriteMsg(msg Msg) error {
 	ptype, _ := rlp.EncodeToBytes(msg.Code)
 
+	// if snappy is enabled, compress message now
+	if rw.snappy {
+		if msg.Size > maxUint24 {
+			return errPlainMessageTooLarge
+		}
+		payload, _ := ioutil.ReadAll(msg.Payload)
+		payload = snappy.Encode(nil, payload)
+
+		msg.Payload = bytes.NewReader(payload)
+		msg.Size = uint32(len(payload))
+	}
 	// write header
 	headbuf := make([]byte, 32)
 	fsize := uint32(len(ptype)) + msg.Size
@@ -671,6 +693,26 @@ func (rw *rlpxFrameRW) ReadMsg() (msg Msg, err error) {
 	}
 	msg.Size = uint32(content.Len())
 	msg.Payload = content
+
+	// if snappy is enabled, verify and decompress message
+	if rw.snappy {
+		payload, err := ioutil.ReadAll(msg.Payload)
+		if err != nil {
+			return msg, err
+		}
+		size, err := snappy.DecodedLen(payload)
+		if err != nil {
+			return msg, err
+		}
+		if size > int(maxUint24) {
+			return msg, errPlainMessageTooLarge
+		}
+		payload, err = snappy.Decode(nil, payload)
+		if err != nil {
+			return msg, err
+		}
+		msg.Size, msg.Payload = uint32(size), bytes.NewReader(payload)
+	}
 	return msg, nil
 }
 
