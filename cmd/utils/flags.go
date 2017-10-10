@@ -28,7 +28,7 @@ import (
 	"strconv"
 	"strings"
 
-	whisper "github.com/ethereum/go-ethereum/whisper/whisperv5"
+	whisper "github.com/matthieu/go-ethereum/whisper/whisperv5"
 	"github.com/matthieu/go-ethereum/accounts"
 	"github.com/matthieu/go-ethereum/accounts/keystore"
 	"github.com/matthieu/go-ethereum/common"

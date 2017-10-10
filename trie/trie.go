@@ -21,16 +21,9 @@ import (
 	"bytes"
 	"fmt"
 
-<<<<<<< HEAD
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/crypto/sha3"
-	"github.com/matthieu/go-ethereum/logger"
-	"github.com/matthieu/go-ethereum/logger/glog"
-=======
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
-	"github.com/ethereum/go-ethereum/log"
->>>>>>> tags/v1.7.1
+	"github.com/matthieu/go-ethereum/log"
 	"github.com/rcrowley/go-metrics"
 )
 

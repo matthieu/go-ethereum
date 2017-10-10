@@ -20,12 +20,7 @@ import (
 	"errors"
 	"fmt"
 
-<<<<<<< HEAD
 	"github.com/matthieu/go-ethereum/common"
-	"github.com/matthieu/go-ethereum/ethdb"
-=======
-	"github.com/ethereum/go-ethereum/common"
->>>>>>> tags/v1.7.1
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 

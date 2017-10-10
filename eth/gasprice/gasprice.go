@@ -23,7 +23,7 @@ import (
 	"sync"
 
 	"github.com/matthieu/go-ethereum/common"
-	"github.com/matthieu/go-ethereum/interal/ethapi"
+	"github.com/matthieu/go-ethereum/internal/ethapi"
 	"github.com/matthieu/go-ethereum/params"
 	"github.com/matthieu/go-ethereum/rpc"
 )

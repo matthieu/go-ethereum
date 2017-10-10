@@ -20,12 +20,8 @@ import (
 	"math/big"
 	"testing"
 
-<<<<<<< HEAD
 	"github.com/matthieu/go-ethereum/common"
-=======
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/params"
->>>>>>> tags/v1.7.1
+	"github.com/matthieu/go-ethereum/params"
 )
 
 type dummyContractRef struct {
