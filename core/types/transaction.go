@@ -54,7 +54,7 @@ type Transaction struct {
 	from atomic.Value
 }
 
-type txdata struct {
+type TxData struct {
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
 	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
 	GasLimit     *big.Int        `json:"gas"      gencodec:"required"`
@@ -154,14 +154,14 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 
 func (tx *Transaction) MarshalJSON() ([]byte, error) {
 	hash := tx.Hash()
-	data := tx.data
+	data := tx.Dat
 	data.Hash = &hash
 	return data.MarshalJSON()
 }
 
 // UnmarshalJSON decodes the web3 RPC transaction format.
 func (tx *Transaction) UnmarshalJSON(input []byte) error {
-	var dec txdata
+	var dec TxData
 	if err := dec.UnmarshalJSON(input); err != nil {
 		return err
 	}
@@ -175,7 +175,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	if !crypto.ValidateSignatureValues(V, dec.R, dec.S, false) {
 		return ErrInvalidSig
 	}
-	*tx = Transaction{data: dec}
+	*tx = Transaction{Dat: dec}
 	return nil
 }
 
@@ -246,8 +246,8 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	if err != nil {
 		return nil, err
 	}
-	cpy := &Transaction{data: tx.data}
-	cpy.data.R, cpy.data.S, cpy.data.V = r, s, v
+	cpy := &Transaction{Dat: tx.Dat}
+	cpy.Dat.R, cpy.Dat.S, cpy.Dat.V = r, s, v
 	return cpy, nil
 }
 
@@ -264,10 +264,10 @@ func (tx *Transaction) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
 
 func (tx *Transaction) String() string {
 	var from, to string
-	if tx.data.V != nil {
+	if tx.Dat.V != nil {
 		// make a best guess about the signer and use that to derive
 		// the sender.
-		signer := deriveSigner(tx.data.V)
+		signer := deriveSigner(tx.Dat.V)
 		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
 			from = "[invalid sender: invalid sig]"
 		} else {
@@ -276,7 +276,7 @@ func (tx *Transaction) String() string {
 	} else {
 		from = "[invalid sender: nil V field]"
 	}
-	if tx.data.Recipient == nil {
+	if tx.Dat.Recipient == nil {
 		to = "[contract creation]"
 	} else {
 		to = fmt.Sprintf("%x", tx.Dat.Recipient[:])
@@ -298,7 +298,7 @@ func (tx *Transaction) String() string {
 	Hex:      %x
 `,
 		tx.Hash(),
-		tx.data.Recipient == nil,
+		tx.Dat.Recipient == nil,
 		from,
 		to,
 		tx.Dat.AccountNonce,
