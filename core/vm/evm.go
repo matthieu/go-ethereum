@@ -101,9 +101,22 @@ type EVM struct {
 	// global (to this context) ethereum virtual machine
 	// used throughout the execution of the tx.
 	interpreter *Interpreter
+
+	listener InternalTxListener
+
 	// abort is used to abort the EVM calling operations
 	// NOTE: must be set atomically
 	abort int32
+}
+
+// Attachment point for things that are interested in various
+// balance-impacting internal state changes ("transactions").
+type InternalTxListener interface {
+	RegisterCall(nonce uint64, gasPrice, gas *big.Int, srcAddr, dstAddr common.Address, value *big.Int, data []byte)
+	RegisterCallCode(nonce uint64, gasPrice, gas *big.Int, contractAddr common.Address, value *big.Int, data []byte)
+	RegisterCreate(nonce uint64, gasPrice, gas *big.Int, srcAddr, newContractAddr common.Address, value *big.Int, data []byte)
+	RegisterDelegateCall(nonce uint64, gasPrice, gas *big.Int, callerAddr common.Address, value *big.Int, data []byte)
+	RegisterSuicide(nonce uint64, gasPrice, gas *big.Int, contractAddr, creatorAddr common.Address, remainingValue *big.Int)
 }
 
 // NewEVM retutrns a new EVM . The returned EVM is not thread safe and should
