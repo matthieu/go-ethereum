@@ -139,5 +139,7 @@ func ApplyTransaction(config *params.ChainConfig, bc blockchain, author *common.
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
+	itx.SetParentHash(tx.Hash())
+
 	return receipt, gas, itx.InternalTransactions(), vmerr, err
 }

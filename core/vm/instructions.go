@@ -749,7 +749,8 @@ func opSuicide(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *
 		evm.listener.RegisterSuicide(
 			evm.StateDB.GetNonce(contract.Address()),
 			evm.Context.GasPrice, contract.Gas,
-			contract.Address(), dstAddr, big.NewInt(0).Set(balance))
+			contract.Address(), dstAddr, big.NewInt(0).Set(balance),
+			uint64(evm.depth))
 	}
 	evm.StateDB.Suicide(contract.Address())
 	return nil, nil

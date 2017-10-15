@@ -20,46 +20,63 @@ func NewInternalTxWatcher() *InternalTxWatcher {
 	}
 }
 
+// Public API: for users
+func (self *InternalTxWatcher) SetParentHash(ph common.Hash) {
+	for i := range self.internals {
+		self.internals[i].ParentHash = ph
+	}
+}
+
 func (self *InternalTxWatcher) InternalTransactions() types.InternalTransactions {
 	return self.internals
 }
 
-func (self *InternalTxWatcher) RegisterCall(nonce uint64, gasPrice *big.Int, gas uint64, srcAddr, dstAddr common.Address, value *big.Int, data []byte) {
+// Public API: For interfacing with EVM
+func (self *InternalTxWatcher) RegisterCall(nonce uint64, gasPrice *big.Int, gas uint64, srcAddr, dstAddr common.Address, value *big.Int, data []byte, depth uint64) {
 	self.internals = append(self.internals,
 		types.NewInternalTransaction(nonce, gasPrice, toBigInt(gas),
-			srcAddr, dstAddr, value, data, "call"))
+			srcAddr, dstAddr, value, data, depth, self.index(), "call"))
 }
 
-func (self *InternalTxWatcher) RegisterStaticCall(nonce uint64, gasPrice *big.Int, gas uint64, srcAddr, dstAddr common.Address, data []byte) {
+func (self *InternalTxWatcher) RegisterStaticCall(nonce uint64, gasPrice *big.Int, gas uint64, srcAddr, dstAddr common.Address, data []byte, depth uint64) {
 
 	self.internals = append(self.internals,
 		types.NewInternalTransaction(nonce, gasPrice, toBigInt(gas),
-			srcAddr, dstAddr, big.NewInt(0), data, "staticcall"))
+			srcAddr, dstAddr, big.NewInt(0), data, depth, self.index(),
+			"staticcall"))
 }
 
-func (self *InternalTxWatcher) RegisterCallCode(nonce uint64, gasPrice *big.Int, gas uint64, contractAddr common.Address, value *big.Int, data []byte) {
+func (self *InternalTxWatcher) RegisterCallCode(nonce uint64, gasPrice *big.Int, gas uint64, contractAddr common.Address, value *big.Int, data []byte, depth uint64) {
 	self.internals = append(self.internals,
 		types.NewInternalTransaction(nonce, gasPrice, toBigInt(gas),
-			contractAddr, contractAddr, value, data, "call"))
+			contractAddr, contractAddr, value, data, depth, self.index(),
+			"call"))
 }
 
-func (self *InternalTxWatcher) RegisterCreate(nonce uint64, gasPrice *big.Int, gas uint64, srcAddr, newContractAddr common.Address, value *big.Int, data []byte) {
+func (self *InternalTxWatcher) RegisterCreate(nonce uint64, gasPrice *big.Int, gas uint64, srcAddr, newContractAddr common.Address, value *big.Int, data []byte, depth uint64) {
 	self.internals = append(self.internals,
 		types.NewInternalTransaction(nonce, gasPrice, toBigInt(gas),
-			srcAddr, newContractAddr, value, data, "create"))
+			srcAddr, newContractAddr, value, data, depth, self.index(),
+			"create"))
 }
 
-func (self *InternalTxWatcher) RegisterDelegateCall(nonce uint64, gasPrice *big.Int, gas uint64, callerAddr common.Address, value *big.Int, data []byte) {
+func (self *InternalTxWatcher) RegisterDelegateCall(nonce uint64, gasPrice *big.Int, gas uint64, callerAddr common.Address, value *big.Int, data []byte, depth uint64) {
 	self.internals = append(self.internals,
 		types.NewInternalTransaction(nonce, gasPrice, toBigInt(gas),
-			callerAddr, callerAddr, value, data, "call"))
+			callerAddr, callerAddr, value, data, depth, self.index(), "call"))
 }
 
-func (self *InternalTxWatcher) RegisterSuicide(nonce uint64, gasPrice *big.Int, gas uint64, contractAddr, creatorAddr common.Address, remainingValue *big.Int) {
+func (self *InternalTxWatcher) RegisterSuicide(nonce uint64, gasPrice *big.Int, gas uint64, contractAddr, creatorAddr common.Address, remainingValue *big.Int, depth uint64) {
 	self.internals = append(self.internals,
 		types.NewInternalTransaction(nonce, gasPrice, toBigInt(gas),
 			contractAddr, creatorAddr, remainingValue,
-			append([]byte{vm.SELFDESTRUCT}, creatorAddr[:]...), "suicide"))
+			append([]byte{vm.SELFDESTRUCT}, creatorAddr[:]...),
+			depth, self.index(), "suicide"))
+}
+
+// Utilities
+func (self *InternalTxWatcher) index() uint64 {
+	return uint64(len(self.internals))
 }
 
 func toBigInt(g uint64) *big.Int {

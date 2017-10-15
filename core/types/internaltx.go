@@ -19,12 +19,14 @@ type InternalTransaction struct {
 
 type InternalTransactions []*InternalTransaction
 
-func NewInternalTransaction(accountNonce uint64, price, gasLimit *big.Int, sender common.Address,
-	recipient common.Address, amount *big.Int, payload []byte, note string) *InternalTransaction {
+func NewInternalTransaction(accountNonce uint64, price,
+	gasLimit *big.Int, sender common.Address,
+	recipient common.Address, amount *big.Int, payload []byte,
+	depth, index uint64, note string) *InternalTransaction {
 
 	tx := NewTransaction(accountNonce, recipient, amount, gasLimit, price, payload)
 	var h common.Hash
-	return &InternalTransaction{tx, &sender, h, 0, 0, note, false}
+	return &InternalTransaction{tx, &sender, h, depth, index, note, false}
 }
 
 func (self *InternalTransaction) Reject() {
