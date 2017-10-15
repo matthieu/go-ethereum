@@ -63,6 +63,20 @@ func errResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
 }
 
+type pmBlockChain interface {
+	downloader.BlockChain
+	Config() *params.ChainConfig
+	Status() (*big.Int, common.Hash, common.Hash)
+	GetHeaderByNumber(uint64) *types.Header
+	GetHeader(common.Hash, uint64) *types.Header
+	GetBlockHashesFromHash(common.Hash, uint64) []common.Hash
+	GetTd(common.Hash, uint64) *big.Int
+	GetBodyRLP(common.Hash) rlp.RawValue
+	GetBlock(common.Hash, uint64) *types.Block
+	HasBlock(common.Hash, uint64) bool
+	Genesis() *types.Block
+}
+
 type ProtocolManager struct {
 	networkId uint64
 
@@ -70,7 +84,7 @@ type ProtocolManager struct {
 	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
 	txpool      txPool
-	blockchain  *core.BlockChain
+	blockchain  pmBlockChain
 	chaindb     ethdb.Database
 	chainconfig *params.ChainConfig
 	maxPeers    int
@@ -99,7 +113,7 @@ type ProtocolManager struct {
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the ethereum network.
-func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ethdb.Database) (*ProtocolManager, error) {
+func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain pmBlockChain, chaindb ethdb.Database) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkId:   networkId,
