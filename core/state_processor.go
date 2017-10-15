@@ -99,6 +99,10 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
+
+	itx := NewInternalTxWatcher()
+	vmenv.AddListener(itx)
+
 	// Apply the transaction to the current state (included in the env)
 	_, gas, failed, err := ApplyMessage(vmenv, msg, gp)
 	if err != nil {
@@ -128,5 +132,5 @@ func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
-	return receipt, gas, env.InternalTransactions(), err
+	return receipt, gas, itx.InternalTransactions(), err
 }
