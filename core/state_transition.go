@@ -255,7 +255,12 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 	st.refundGas()
 	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
 
-	return ret, requiredGas, st.gasUsed(), vmerr != nil, vmerr.Error(), err
+	var errStr string
+	if vmerr != nil {
+		errStr = vmerr.Error()
+	}
+
+	return ret, requiredGas, st.gasUsed(), vmerr != nil, errStr, err
 }
 
 func (st *StateTransition) refundGas() {
