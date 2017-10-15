@@ -70,7 +70,7 @@ type ProtocolManager struct {
 	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
 	txpool      txPool
-	blockchain  blockChain
+	blockchain  *core.BlockChain
 	chaindb     ethdb.Database
 	chainconfig *params.ChainConfig
 	maxPeers    int
@@ -105,7 +105,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		networkId:   networkId,
 		eventMux:    mux,
 		txpool:      txpool,
-		blockchain:  blockchain,
+		blockchain:  blockChain,
 		chaindb:     chaindb,
 		chainconfig: config,
 		peers:       newPeerSet(),
