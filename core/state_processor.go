@@ -29,18 +29,23 @@ import (
 	"github.com/matthieu/go-ethereum/params"
 )
 
+type blockchain interface {
+	consensus.ChainReader
+	Engine() consensus.Engine
+}
+
 // StateProcessor is a basic Processor, which takes care of transitioning
 // state from one point to another.
 //
 // StateProcessor implements Processor.
 type StateProcessor struct {
 	config *params.ChainConfig // Chain configuration options
-	bc     *BlockChain         // Canonical block chain
+	bc     blockchain          // Canonical block chain
 	engine consensus.Engine    // Consensus engine used for block rewards
 }
 
 // NewStateProcessor initialises a new StateProcessor.
-func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consensus.Engine) *StateProcessor {
+func NewStateProcessor(config *params.ChainConfig, bc blockchain, engine consensus.Engine) *StateProcessor {
 	return &StateProcessor{
 		config: config,
 		bc:     bc,
@@ -91,7 +96,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func ApplyTransaction(config *params.ChainConfig, bc *BlockChain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int, cfg vm.Config) (*types.Receipt, *big.Int, types.InternalTransactions, string, error) {
+func ApplyTransaction(config *params.ChainConfig, bc blockchain, author *common.Address, gp *GasPool, statedb *state.StateDB, header *types.Header, tx *types.Transaction, usedGas *big.Int, cfg vm.Config) (*types.Receipt, *big.Int, types.InternalTransactions, string, error) {
 	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number))
 	if err != nil {
 		return nil, nil, nil, "", err
