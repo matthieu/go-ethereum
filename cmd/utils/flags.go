@@ -28,10 +28,11 @@ import (
 	"strconv"
 	"strings"
 
-	whisper "github.com/matthieu/go-ethereum/whisper/whisperv5"
 	"github.com/matthieu/go-ethereum/accounts"
 	"github.com/matthieu/go-ethereum/accounts/keystore"
 	"github.com/matthieu/go-ethereum/common"
+	"github.com/matthieu/go-ethereum/consensus"
+	"github.com/matthieu/go-ethereum/consensus/clique"
 	"github.com/matthieu/go-ethereum/consensus/ethash"
 	"github.com/matthieu/go-ethereum/core"
 	"github.com/matthieu/go-ethereum/core/state"
@@ -52,6 +53,7 @@ import (
 	"github.com/matthieu/go-ethereum/p2p/nat"
 	"github.com/matthieu/go-ethereum/p2p/netutil"
 	"github.com/matthieu/go-ethereum/params"
+	whisper "github.com/matthieu/go-ethereum/whisper/whisperv5"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -1086,16 +1088,21 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	var err error
 	chainDb = MakeChainDatabase(ctx, stack)
 
-	engine := ethash.NewFaker()
-	if !ctx.GlobalBool(FakePoWFlag.Name) {
-		engine = ethash.New(
-			stack.ResolvePath(eth.DefaultConfig.EthashCacheDir), eth.DefaultConfig.EthashCachesInMem, eth.DefaultConfig.EthashCachesOnDisk,
-			stack.ResolvePath(eth.DefaultConfig.EthashDatasetDir), eth.DefaultConfig.EthashDatasetsInMem, eth.DefaultConfig.EthashDatasetsOnDisk,
-		)
-	}
 	config, _, err := core.SetupGenesisBlock(chainDb, MakeGenesis(ctx))
 	if err != nil {
 		Fatalf("%v", err)
+	}
+	var engine consensus.Engine
+	if config.Clique != nil {
+		engine = clique.New(config.Clique, chainDb)
+	} else {
+		engine = ethash.NewFaker()
+		if !ctx.GlobalBool(FakePoWFlag.Name) {
+			engine = ethash.New(
+				stack.ResolvePath(eth.DefaultConfig.EthashCacheDir), eth.DefaultConfig.EthashCachesInMem, eth.DefaultConfig.EthashCachesOnDisk,
+				stack.ResolvePath(eth.DefaultConfig.EthashDatasetDir), eth.DefaultConfig.EthashDatasetsInMem, eth.DefaultConfig.EthashDatasetsOnDisk,
+			)
+		}
 	}
 	vmcfg := vm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
 	chain, err = core.NewBlockChain(chainDb, config, engine, vmcfg)

@@ -25,10 +25,12 @@ import (
 	"sync"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/matthieu/go-ethereum/accounts"
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/common/hexutil"
 	"github.com/matthieu/go-ethereum/consensus"
+	"github.com/matthieu/go-ethereum/consensus/misc"
 	"github.com/matthieu/go-ethereum/core/state"
 	"github.com/matthieu/go-ethereum/core/types"
 	"github.com/matthieu/go-ethereum/crypto"
@@ -38,7 +40,6 @@ import (
 	"github.com/matthieu/go-ethereum/params"
 	"github.com/matthieu/go-ethereum/rlp"
 	"github.com/matthieu/go-ethereum/rpc"
-	lru "github.com/hashicorp/golang-lru"
 )
 
 const (
@@ -312,6 +313,10 @@ func (c *Clique) verifyHeader(chain consensus.ChainReader, header *types.Header,
 		if header.Difficulty == nil || (header.Difficulty.Cmp(diffInTurn) != 0 && header.Difficulty.Cmp(diffNoTurn) != 0) {
 			return errInvalidDifficulty
 		}
+	}
+	// If all checks passed, validate any special fields for hard forks
+	if err := misc.VerifyForkHashes(chain.Config(), header, false); err != nil {
+		return err
 	}
 	// All basic checks passed, verify cascading fields
 	return c.verifyCascadingFields(chain, header, parents)
