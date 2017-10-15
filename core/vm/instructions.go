@@ -745,10 +745,12 @@ func opSuicide(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *
 	dstAddr := common.BigToAddress(stack.pop())
 	evm.StateDB.AddBalance(common.BigToAddress(stack.pop()), balance)
 
-	env.RecordSuicide(contract.Address(), dstAddr,
-		evm.StateDB.GetNonce(contract.Address()),
-		big.NewInt(0).SetUint64(contract.Gas), contract.GasPrice, big.NewInt(0).Set(balance))
-
+	if evm.listener != nil {
+		evm.listener.RegisterSuicide(
+			evm.StateDB.GetNonce(contract.Address()),
+			evm.Context.GasPrice, contract.Gas,
+			contract.Address(), dstAddr, big.NewInt(0).Set(balance))
+	}
 	evm.StateDB.Suicide(contract.Address())
 	return nil, nil
 }
