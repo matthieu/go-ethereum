@@ -105,7 +105,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		networkId:   networkId,
 		eventMux:    mux,
 		txpool:      txpool,
-		blockchain:  blockChain,
+		blockchain:  blockchain,
 		chaindb:     chaindb,
 		chainconfig: config,
 		peers:       newPeerSet(),
