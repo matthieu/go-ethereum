@@ -17,11 +17,9 @@
 package runtime
 
 import (
-	"math/big"
-
-	"github.com/matthieu/go-ethereum/common"
-	"github.com/matthieu/go-ethereum/core"
-	"github.com/matthieu/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/vm"
 )
 
 func NewEnv(cfg *Config) *vm.EVM {
@@ -35,7 +33,7 @@ func NewEnv(cfg *Config) *vm.EVM {
 		BlockNumber: cfg.BlockNumber,
 		Time:        cfg.Time,
 		Difficulty:  cfg.Difficulty,
-		GasLimit:    new(big.Int).SetUint64(cfg.GasLimit),
+		GasLimit:    cfg.GasLimit,
 		GasPrice:    cfg.GasPrice,
 	}
 
