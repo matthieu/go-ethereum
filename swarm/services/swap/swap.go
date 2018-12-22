@@ -27,14 +27,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/contracts/chequebook"
-	"github.com/ethereum/go-ethereum/contracts/chequebook/contract"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/swarm/log"
-	"github.com/ethereum/go-ethereum/swarm/services/swap/swap"
+	"github.com/matthieu/go-ethereum/accounts/abi/bind"
+	"github.com/matthieu/go-ethereum/common"
+	"github.com/matthieu/go-ethereum/contracts/chequebook"
+	"github.com/matthieu/go-ethereum/contracts/chequebook/contract"
+	"github.com/matthieu/go-ethereum/core/types"
+	"github.com/matthieu/go-ethereum/crypto"
+	"github.com/matthieu/go-ethereum/swarm/log"
+	"github.com/matthieu/go-ethereum/swarm/services/swap/swap"
 )
 
 // SwAP       Swarm Accounting Protocol with

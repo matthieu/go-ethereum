@@ -32,12 +32,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/metrics"
-	"github.com/ethereum/go-ethereum/swarm/api"
-	"github.com/ethereum/go-ethereum/swarm/api/client"
-	"github.com/ethereum/go-ethereum/swarm/spancontext"
-	"github.com/ethereum/go-ethereum/swarm/testutil"
+	"github.com/matthieu/go-ethereum/log"
+	"github.com/matthieu/go-ethereum/metrics"
+	"github.com/matthieu/go-ethereum/swarm/api"
+	"github.com/matthieu/go-ethereum/swarm/api/client"
+	"github.com/matthieu/go-ethereum/swarm/spancontext"
+	"github.com/matthieu/go-ethereum/swarm/testutil"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/pborman/uuid"
 

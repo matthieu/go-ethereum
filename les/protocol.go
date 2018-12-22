@@ -24,12 +24,12 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/matthieu/go-ethereum/common"
+	"github.com/matthieu/go-ethereum/core"
+	"github.com/matthieu/go-ethereum/core/rawdb"
+	"github.com/matthieu/go-ethereum/crypto"
+	"github.com/matthieu/go-ethereum/p2p/enode"
+	"github.com/matthieu/go-ethereum/rlp"
 )
 
 // Constants to match up protocol versions and messages

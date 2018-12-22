@@ -24,13 +24,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/matthieu/go-ethereum/common"
+	"github.com/matthieu/go-ethereum/consensus/ethash"
+	"github.com/matthieu/go-ethereum/core"
+	"github.com/matthieu/go-ethereum/core/types"
+	"github.com/matthieu/go-ethereum/crypto"
+	"github.com/matthieu/go-ethereum/ethdb"
+	"github.com/matthieu/go-ethereum/params"
 )
 
 var (

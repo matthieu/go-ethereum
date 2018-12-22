@@ -24,13 +24,13 @@ import (
 	"net"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/netutil"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/matthieu/go-ethereum/common"
+	"github.com/matthieu/go-ethereum/common/mclock"
+	"github.com/matthieu/go-ethereum/crypto"
+	"github.com/matthieu/go-ethereum/crypto/sha3"
+	"github.com/matthieu/go-ethereum/log"
+	"github.com/matthieu/go-ethereum/p2p/netutil"
+	"github.com/matthieu/go-ethereum/rlp"
 )
 
 var (

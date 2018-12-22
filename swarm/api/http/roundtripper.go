@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ethereum/go-ethereum/swarm/log"
+	"github.com/matthieu/go-ethereum/swarm/log"
 )
 
 /*

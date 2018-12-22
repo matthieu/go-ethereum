@@ -25,15 +25,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/simulations/adapters"
-	"github.com/ethereum/go-ethereum/swarm/network"
-	"github.com/ethereum/go-ethereum/swarm/network/simulation"
-	"github.com/ethereum/go-ethereum/swarm/state"
-	"github.com/ethereum/go-ethereum/swarm/storage"
-	"github.com/ethereum/go-ethereum/swarm/testutil"
+	"github.com/matthieu/go-ethereum/log"
+	"github.com/matthieu/go-ethereum/node"
+	"github.com/matthieu/go-ethereum/p2p/enode"
+	"github.com/matthieu/go-ethereum/p2p/simulations/adapters"
+	"github.com/matthieu/go-ethereum/swarm/network"
+	"github.com/matthieu/go-ethereum/swarm/network/simulation"
+	"github.com/matthieu/go-ethereum/swarm/state"
+	"github.com/matthieu/go-ethereum/swarm/storage"
+	"github.com/matthieu/go-ethereum/swarm/testutil"
 )
 
 func TestIntervalsLive(t *testing.T) {

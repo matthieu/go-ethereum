@@ -13,7 +13,7 @@ import (
 
 var _ = (*txdataMarshaling)(nil)
 
-func (t Txdata) MarshalJSON() ([]byte, error) {
+func (t TxData) MarshalJSON() ([]byte, error) {
 	type txdata struct {
 		AccountNonce hexutil.Uint64  `json:"nonce"    gencodec:"required"`
 		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`
