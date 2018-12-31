@@ -69,15 +69,16 @@ func errResp(code errCode, format string, v ...interface{}) error {
 type pmBlockChain interface {
 	downloader.BlockChain
 	Config() *params.ChainConfig
-	Status() (*big.Int, common.Hash, common.Hash)
 	GetHeaderByNumber(uint64) *types.Header
 	GetHeader(common.Hash, uint64) *types.Header
 	GetBlockHashesFromHash(common.Hash, uint64) []common.Hash
-	GetTd(common.Hash, uint64) *big.Int
 	GetBodyRLP(common.Hash) rlp.RawValue
 	GetBlock(common.Hash, uint64) *types.Block
-	HasBlock(common.Hash, uint64) bool
 	Genesis() *types.Block
+	GetAncestor(hash common.Hash, number, ancestor uint64, maxNonCanonical *uint64) (common.Hash, uint64)
+	TrieNode(hash common.Hash) ([]byte, error)
+	GetReceiptsByHash(hash common.Hash) types.Receipts
+	GetTdByHash(hash common.Hash) *big.Int
 }
 
 type ProtocolManager struct {

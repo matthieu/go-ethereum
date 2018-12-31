@@ -883,6 +883,7 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memo
 	dstAddr := common.BigToAddress(stack.pop())
 	interpreter.evm.StateDB.AddBalance(dstAddr, balance)
 
+	evm := interpreter.evm
 	if evm.listener != nil {
 		evm.listener.RegisterSuicide(
 			evm.StateDB.GetNonce(contract.Address()),

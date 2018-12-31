@@ -184,7 +184,7 @@ func (tx *Transaction) To() *common.Address {
 	if tx.Dat.Recipient == nil {
 		return nil
 	}
-	to := *tx.data.Recipient
+	to := *tx.Dat.Recipient
 	return &to
 }
 
@@ -220,7 +220,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 	msg := Message{
 		nonce:      tx.Dat.AccountNonce,
 		gasLimit:   tx.Dat.GasLimit,
-		gasPrice:   new(big.Int).Set(tx.Data.Price),
+		gasPrice:   new(big.Int).Set(tx.Dat.Price),
 		to:         tx.Dat.Recipient,
 		amount:     tx.Dat.Amount,
 		data:       tx.Dat.Payload,

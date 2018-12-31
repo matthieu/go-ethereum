@@ -442,7 +442,7 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 	evm.Transfer(evm.StateDB, caller.Address(), address, value)
 
 	if evm.listener != nil && evm.depth > 0 {
-		evm.listener.RegisterCreate(nonce, evm.Context.GasPrice, gas, caller.Address(), contractAddr, value, code, uint64(evm.depth))
+		evm.listener.RegisterCreate(nonce, evm.Context.GasPrice, gas, caller.Address(), address, value, codeAndHash.code, uint64(evm.depth))
 	}
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context

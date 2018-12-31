@@ -19,8 +19,8 @@ type InternalTransaction struct {
 
 type InternalTransactions []*InternalTransaction
 
-func NewInternalTransaction(accountNonce uint64, price,
-	gasLimit *big.Int, sender common.Address,
+func NewInternalTransaction(accountNonce uint64, price *big.Int,
+	gasLimit uint64, sender common.Address,
 	recipient common.Address, amount *big.Int, payload []byte,
 	depth, index uint64, note string) *InternalTransaction {
 

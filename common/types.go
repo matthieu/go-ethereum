@@ -220,6 +220,8 @@ func (a Address) String() string {
 	return a.Hex()
 }
 
+func (a Address) Str() string { return string(a[:]) }
+
 // Format implements fmt.Formatter, forcing the byte slice to be formatted as is,
 // without going through the stringer interface used for logging.
 func (a Address) Format(s fmt.State, c rune) {
