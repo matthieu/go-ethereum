@@ -20,7 +20,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"math/big"
 	"os"
 	"reflect"
@@ -31,6 +30,7 @@ import (
 	"github.com/matthieu/go-ethereum/cmd/utils"
 	"github.com/matthieu/go-ethereum/dashboard"
 	"github.com/matthieu/go-ethereum/eth"
+	"github.com/matthieu/go-ethereum/graphql"
 	"github.com/matthieu/go-ethereum/node"
 	"github.com/matthieu/go-ethereum/params"
 	whisper "github.com/matthieu/go-ethereum/whisper/whisperv6"
@@ -125,6 +125,7 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	}
 
 	// Apply flags.
+	utils.SetULC(ctx, &cfg.Eth)
 	utils.SetNodeConfig(ctx, &cfg.Node)
 	stack, err := node.New(&cfg.Node)
 	if err != nil {
@@ -177,6 +178,13 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 		utils.RegisterShhService(stack, &cfg.Shh)
 	}
 
+	// Configure GraphQL if required
+	if ctx.GlobalIsSet(utils.GraphQLEnabledFlag.Name) {
+		if err := graphql.RegisterGraphQLService(stack, cfg.Node.GraphQLEndpoint(), cfg.Node.GraphQLCors, cfg.Node.GraphQLVirtualHosts, cfg.Node.HTTPTimeouts); err != nil {
+			utils.Fatalf("Failed to register the Ethereum service: %v", err)
+		}
+	}
+
 	// Add the Ethereum Stats daemon if requested.
 	if cfg.Ethstats.URL != "" {
 		utils.RegisterEthStatsService(stack, cfg.Ethstats.URL)
@@ -198,7 +206,17 @@ func dumpConfig(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	io.WriteString(os.Stdout, comment)
-	os.Stdout.Write(out)
+
+	dump := os.Stdout
+	if ctx.NArg() > 0 {
+		dump, err = os.OpenFile(ctx.Args().Get(0), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return err
+		}
+		defer dump.Close()
+	}
+	dump.WriteString(comment)
+	dump.Write(out)
+
 	return nil
 }

@@ -25,7 +25,6 @@ import (
 	"sync"
 	"time"
 
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/matthieu/go-ethereum/accounts"
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/common/hexutil"
@@ -34,12 +33,13 @@ import (
 	"github.com/matthieu/go-ethereum/core/state"
 	"github.com/matthieu/go-ethereum/core/types"
 	"github.com/matthieu/go-ethereum/crypto"
-	"github.com/matthieu/go-ethereum/crypto/sha3"
 	"github.com/matthieu/go-ethereum/ethdb"
 	"github.com/matthieu/go-ethereum/log"
 	"github.com/matthieu/go-ethereum/params"
 	"github.com/matthieu/go-ethereum/rlp"
 	"github.com/matthieu/go-ethereum/rpc"
+	lru "github.com/hashicorp/golang-lru"
+	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -148,7 +148,7 @@ type SignerFn func(accounts.Account, []byte) ([]byte, error)
 // panics. This is done to avoid accidentally using both forms (signature present
 // or not), which could be abused to produce different hashes for the same header.
 func sigHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.NewKeccak256()
+	hasher := sha3.NewLegacyKeccak256()
 
 	rlp.Encode(hasher, []interface{}{
 		header.ParentHash,

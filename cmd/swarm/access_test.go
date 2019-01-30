@@ -33,11 +33,11 @@ import (
 
 	"github.com/matthieu/go-ethereum/crypto"
 	"github.com/matthieu/go-ethereum/crypto/ecies"
-	"github.com/matthieu/go-ethereum/crypto/sha3"
 	"github.com/matthieu/go-ethereum/log"
 	"github.com/matthieu/go-ethereum/swarm/api"
 	swarmapi "github.com/matthieu/go-ethereum/swarm/api/client"
 	"github.com/matthieu/go-ethereum/swarm/testutil"
+	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -598,7 +598,7 @@ func TestKeypairSanity(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		hasher := sha3.NewKeccak256()
+		hasher := sha3.NewLegacyKeccak256()
 		hasher.Write(salt)
 		shared, err := hex.DecodeString(sharedSecret)
 		if err != nil {

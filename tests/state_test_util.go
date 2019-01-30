@@ -31,14 +31,14 @@ import (
 	"github.com/matthieu/go-ethereum/core/types"
 	"github.com/matthieu/go-ethereum/core/vm"
 	"github.com/matthieu/go-ethereum/crypto"
-	"github.com/matthieu/go-ethereum/crypto/sha3"
 	"github.com/matthieu/go-ethereum/ethdb"
 	"github.com/matthieu/go-ethereum/params"
 	"github.com/matthieu/go-ethereum/rlp"
+	"golang.org/x/crypto/sha3"
 )
 
 // StateTest checks transaction processing without block context.
-// See https://github.com/ethereum/EIPs/issues/176 for the test format specification.
+// See https://github.com/matthieu/EIPs/issues/176 for the test format specification.
 type StateTest struct {
 	json stJSON
 }
@@ -229,7 +229,7 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 	dataHex := tx.Data[ps.Indexes.Data]
 	valueHex := tx.Value[ps.Indexes.Value]
 	gasLimit := tx.GasLimit[ps.Indexes.Gas]
-	// Value, Data hex encoding is messy: https://github.com/ethereum/tests/issues/203
+	// Value, Data hex encoding is messy: https://github.com/matthieu/tests/issues/203
 	value := new(big.Int)
 	if valueHex != "0x" {
 		v, ok := math.ParseBig256(valueHex)
@@ -248,7 +248,7 @@ func (tx *stTransaction) toMessage(ps stPostState) (core.Message, error) {
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
-	hw := sha3.NewKeccak256()
+	hw := sha3.NewLegacyKeccak256()
 	rlp.Encode(hw, x)
 	hw.Sum(h[:0])
 	return h

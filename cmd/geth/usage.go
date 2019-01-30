@@ -26,14 +26,14 @@ import (
 
 	"github.com/matthieu/go-ethereum/cmd/utils"
 	"github.com/matthieu/go-ethereum/internal/debug"
-	"gopkg.in/urfave/cli.v1"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 // AppHelpTemplate is the test template for the default, global app help topic.
 var AppHelpTemplate = `NAME:
    {{.App.Name}} - {{.App.Usage}}
 
-   Copyright 2013-2018 The go-ethereum Authors
+   Copyright 2013-2019 The go-ethereum Authors
 
 USAGE:
    {{.App.HelpName}} [options]{{if .App.Commands}} command [command options]{{end}} {{if .App.ArgsUsage}}{{.App.ArgsUsage}}{{else}}[arguments...]{{end}}
@@ -229,7 +229,7 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.MetricsInfluxDBDatabaseFlag,
 			utils.MetricsInfluxDBUsernameFlag,
 			utils.MetricsInfluxDBPasswordFlag,
-			utils.MetricsInfluxDBHostTagFlag,
+			utils.MetricsInfluxDBTagsFlag,
 		},
 	},
 	{

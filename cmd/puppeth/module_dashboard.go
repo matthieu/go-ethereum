@@ -211,7 +211,7 @@ var dashboardContent = `
 											<pre>ethereumwallet --rpc $HOME/.{{.Network}}/geth.ipc --node-networkid={{.NetworkID}} --node-datadir=$HOME/.{{.Network}}{{if .Ethstats}} --node-ethstats='{{.Ethstats}}'{{end}} --node-bootnodes={{.BootnodesFlat}}</pre>
 										<p>
 										<br/>
-										<p>You can download the Ethereum Wallet from <a href="https://github.com/ethereum/mist/releases" target="about:blank">https://github.com/ethereum/mist/releases</a>.</p>
+										<p>You can download the Ethereum Wallet from <a href="https://github.com/matthieu/mist/releases" target="about:blank">https://github.com/matthieu/mist/releases</a>.</p>
 									</div>
 								</div>
 							</div>
@@ -232,7 +232,7 @@ var dashboardContent = `
 											<pre>mist --rpc $HOME/.{{.Network}}/geth.ipc --node-networkid={{.NetworkID}} --node-datadir=$HOME/.{{.Network}}{{if .Ethstats}} --node-ethstats='{{.Ethstats}}'{{end}} --node-bootnodes={{.BootnodesFlat}}</pre>
 										<p>
 										<br/>
-										<p>You can download the Mist browser from <a href="https://github.com/ethereum/mist/releases" target="about:blank">https://github.com/ethereum/mist/releases</a>.</p>
+										<p>You can download the Mist browser from <a href="https://github.com/matthieu/mist/releases" target="about:blank">https://github.com/matthieu/mist/releases</a>.</p>
 									</div>
 								</div>
 							</div>
@@ -337,7 +337,7 @@ try! node?.start();
 											<pre>eth --config {{.CppGenesis}} --datadir $HOME/.{{.Network}} --peerset "{{.CppBootnodes}}"</pre>
 										</p>
 										<br/>
-										<p>You can find cpp-ethereum at <a href="https://github.com/ethereum/cpp-ethereum/" target="about:blank">https://github.com/ethereum/cpp-ethereum/</a>.</p>
+										<p>You can find cpp-ethereum at <a href="https://github.com/matthieu/cpp-ethereum/" target="about:blank">https://github.com/matthieu/cpp-ethereum/</a>.</p>
 									</div>
 								</div>
 							</div>
@@ -401,7 +401,7 @@ try! node?.start();
 											<pre>pyethapp -c eth.genesis="$(cat {{.PythonGenesis}})" -c eth.network_id={{.NetworkID}} -c data_dir=$HOME/.config/pyethapp/{{.Network}} -c discovery.bootstrap_nodes="[{{.PythonBootnodes}}]" -c eth.block.HOMESTEAD_FORK_BLKNUM={{.Homestead}} -c eth.block.ANTI_DOS_FORK_BLKNUM={{.Tangerine}} -c eth.block.SPURIOUS_DRAGON_FORK_BLKNUM={{.Spurious}} -c eth.block.METROPOLIS_FORK_BLKNUM={{.Byzantium}} -c eth.block.DAO_FORK_BLKNUM=18446744073709551615 run --console</pre>
 										</p>
 										<br/>
-										<p>You can find pyethapp at <a href="https://github.com/ethereum/pyethapp/" target="about:blank">https://github.com/ethereum/pyethapp/</a>.</p>
+										<p>You can find pyethapp at <a href="https://github.com/matthieu/pyethapp/" target="about:blank">https://github.com/matthieu/pyethapp/</a>.</p>
 									</div>
 								</div>
 							</div>
@@ -608,30 +608,31 @@ func deployDashboard(client *sshClient, network string, conf *config, config *da
 		bootPython[i] = "'" + boot + "'"
 	}
 	template.Must(template.New("").Parse(dashboardContent)).Execute(indexfile, map[string]interface{}{
-		"Network":          network,
-		"NetworkID":        conf.Genesis.Config.ChainID,
-		"NetworkTitle":     strings.Title(network),
-		"EthstatsPage":     config.ethstats,
-		"ExplorerPage":     config.explorer,
-		"WalletPage":       config.wallet,
-		"FaucetPage":       config.faucet,
-		"GethGenesis":      network + ".json",
-		"Bootnodes":        conf.bootnodes,
-		"BootnodesFlat":    strings.Join(conf.bootnodes, ","),
-		"Ethstats":         statsLogin,
-		"Ethash":           conf.Genesis.Config.Ethash != nil,
-		"CppGenesis":       network + "-cpp.json",
-		"CppBootnodes":     strings.Join(bootCpp, " "),
-		"HarmonyGenesis":   network + "-harmony.json",
-		"HarmonyBootnodes": strings.Join(bootHarmony, " "),
-		"ParityGenesis":    network + "-parity.json",
-		"PythonGenesis":    network + "-python.json",
-		"PythonBootnodes":  strings.Join(bootPython, ","),
-		"Homestead":        conf.Genesis.Config.HomesteadBlock,
-		"Tangerine":        conf.Genesis.Config.EIP150Block,
-		"Spurious":         conf.Genesis.Config.EIP155Block,
-		"Byzantium":        conf.Genesis.Config.ByzantiumBlock,
-		"Constantinople":   conf.Genesis.Config.ConstantinopleBlock,
+		"Network":           network,
+		"NetworkID":         conf.Genesis.Config.ChainID,
+		"NetworkTitle":      strings.Title(network),
+		"EthstatsPage":      config.ethstats,
+		"ExplorerPage":      config.explorer,
+		"WalletPage":        config.wallet,
+		"FaucetPage":        config.faucet,
+		"GethGenesis":       network + ".json",
+		"Bootnodes":         conf.bootnodes,
+		"BootnodesFlat":     strings.Join(conf.bootnodes, ","),
+		"Ethstats":          statsLogin,
+		"Ethash":            conf.Genesis.Config.Ethash != nil,
+		"CppGenesis":        network + "-cpp.json",
+		"CppBootnodes":      strings.Join(bootCpp, " "),
+		"HarmonyGenesis":    network + "-harmony.json",
+		"HarmonyBootnodes":  strings.Join(bootHarmony, " "),
+		"ParityGenesis":     network + "-parity.json",
+		"PythonGenesis":     network + "-python.json",
+		"PythonBootnodes":   strings.Join(bootPython, ","),
+		"Homestead":         conf.Genesis.Config.HomesteadBlock,
+		"Tangerine":         conf.Genesis.Config.EIP150Block,
+		"Spurious":          conf.Genesis.Config.EIP155Block,
+		"Byzantium":         conf.Genesis.Config.ByzantiumBlock,
+		"Constantinople":    conf.Genesis.Config.ConstantinopleBlock,
+		"ConstantinopleFix": conf.Genesis.Config.PetersburgBlock,
 	})
 	files[filepath.Join(workdir, "index.html")] = indexfile.Bytes()
 
