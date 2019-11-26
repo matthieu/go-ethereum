@@ -215,4 +215,18 @@ func tmpManager(t *testing.T, encrypted bool) (string, *Manager) {
 		new = func(kd string) *Manager { return NewManager(kd, veryLightScryptN, veryLightScryptP) }
 	}
 	return d, new(d)
+=======
+	"bytes"
+	"testing"
+
+	"github.com/matthieu/go-ethereum/common/hexutil"
+)
+
+func TestTextHash(t *testing.T) {
+	hash := TextHash([]byte("Hello Joe"))
+	want := hexutil.MustDecode("0xa080337ae51c4e064c189e113edd0ba391df9206e2f49db658bb32cf2911730b")
+	if !bytes.Equal(hash, want) {
+		t.Fatalf("wrong hash: %x", hash)
+	}
+>>>>>>> a718daa674a2e23cb0c8a6789f7e5467e705bbbd
 }

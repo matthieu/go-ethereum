@@ -13,6 +13,7 @@ import (
 
 var _ = (*txdataMarshaling)(nil)
 
+// MarshalJSON marshals as JSON.
 func (t TxData) MarshalJSON() ([]byte, error) {
 	type txdata struct {
 		AccountNonce hexutil.Uint64  `json:"nonce"    gencodec:"required"`

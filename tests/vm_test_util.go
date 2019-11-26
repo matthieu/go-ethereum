@@ -26,10 +26,10 @@ import (
 	"github.com/matthieu/go-ethereum/common/hexutil"
 	"github.com/matthieu/go-ethereum/common/math"
 	"github.com/matthieu/go-ethereum/core"
+	"github.com/matthieu/go-ethereum/core/rawdb"
 	"github.com/matthieu/go-ethereum/core/state"
 	"github.com/matthieu/go-ethereum/core/vm"
 	"github.com/matthieu/go-ethereum/crypto"
-	"github.com/matthieu/go-ethereum/ethdb"
 	"github.com/matthieu/go-ethereum/params"
 )
 
@@ -79,7 +79,7 @@ type vmExecMarshaling struct {
 }
 
 func (t *VMTest) Run(vmconfig vm.Config) error {
-	statedb := MakePreState(ethdb.NewMemDatabase(), t.json.Pre)
+	statedb := MakePreState(rawdb.NewMemoryDatabase(), t.json.Pre)
 	ret, gasRemaining, err := t.exec(statedb, vmconfig)
 
 	if t.json.GasRemaining == nil {
