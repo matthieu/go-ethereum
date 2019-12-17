@@ -28,6 +28,8 @@ import (
 	"github.com/matthieu/go-ethereum/crypto/blake2b"
 	"github.com/matthieu/go-ethereum/crypto/bn256"
 	"github.com/matthieu/go-ethereum/params"
+
+	//lint:ignore SA1019 Needed for precompile
 	"golang.org/x/crypto/ripemd160"
 )
 
