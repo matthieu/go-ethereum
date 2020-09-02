@@ -22,7 +22,6 @@ import (
 	"math/big"
 	"os"
 
-<<<<<<< HEAD
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/core"
 	"github.com/matthieu/go-ethereum/core/state"
@@ -32,17 +31,6 @@ import (
 	"github.com/matthieu/go-ethereum/ethdb"
 	"github.com/matthieu/go-ethereum/logger/glog"
 	"github.com/matthieu/go-ethereum/params"
-=======
-	"github.com/matthieu/go-ethereum/common"
-	"github.com/matthieu/go-ethereum/core"
-	"github.com/matthieu/go-ethereum/core/state"
-	"github.com/matthieu/go-ethereum/core/types"
-	"github.com/matthieu/go-ethereum/core/vm"
-	"github.com/matthieu/go-ethereum/crypto"
-	"github.com/matthieu/go-ethereum/ethdb"
-	"github.com/matthieu/go-ethereum/logger/glog"
-	"github.com/matthieu/go-ethereum/params"
->>>>>>> upstream/master
 )
 
 var (
@@ -160,28 +148,6 @@ type VmTest struct {
 	PostStateRoot string
 }
 
-<<<<<<< HEAD
-type RuleSet struct {
-	HomesteadBlock           *big.Int
-	DAOForkBlock             *big.Int
-	DAOForkSupport           bool
-	HomesteadGasRepriceBlock *big.Int
-}
-
-func (r RuleSet) IsHomestead(n *big.Int) bool {
-	return n.Cmp(r.HomesteadBlock) >= 0
-}
-
-func (r RuleSet) GasTable(num *big.Int) params.GasTable {
-	if r.HomesteadGasRepriceBlock == nil || num == nil || num.Cmp(r.HomesteadGasRepriceBlock) < 0 {
-		return params.GasTableHomestead
-	}
-
-	return params.GasTableHomesteadGasRepriceFork
-}
-
-=======
->>>>>>> upstream/master
 type Env struct {
 	chainConfig  *params.ChainConfig
 	depth        int
