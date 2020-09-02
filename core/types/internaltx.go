@@ -39,14 +39,14 @@ func (tx *InternalTransaction) Hash() common.Hash {
 		rej = byte(1)
 	}
 	data := []interface{}{
-		tx.Dat.AccountNonce,
+		tx.data.AccountNonce,
 		tx.ParentHash,
 		*tx.Sender,
-		*tx.Dat.Recipient,
-		tx.Dat.Amount,
-		tx.Dat.Price,
-		tx.Dat.GasLimit,
-		tx.Dat.Payload,
+		*tx.data.Recipient,
+		tx.data.Amount,
+		tx.data.Price,
+		tx.data.GasLimit,
+		tx.data.Payload,
 		tx.Note,
 		tx.Depth,
 		tx.Index,

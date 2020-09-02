@@ -46,7 +46,7 @@ type Transaction struct {
 	from atomic.Value
 }
 
-type TxData struct {
+type txdata struct {
 	AccountNonce uint64          `json:"nonce"    gencodec:"required"`
 	Price        *big.Int        `json:"gasPrice" gencodec:"required"`
 	GasLimit     uint64          `json:"gas"      gencodec:"required"`
@@ -86,7 +86,7 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 	if len(data) > 0 {
 		data = common.CopyBytes(data)
 	}
-	d := TxData{
+	d := txdata{
 		AccountNonce: nonce,
 		Recipient:    to,
 		Payload:      data,
@@ -111,12 +111,12 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 
 // ChainId returns which chain id this transaction was signed for (if at all)
 func (tx *Transaction) ChainId() *big.Int {
-	return deriveChainId(tx.Dat.V)
+	return deriveChainId(tx.data.V)
 }
 
 // Protected returns whether the transaction is protected from replay protection.
 func (tx *Transaction) Protected() bool {
-	return isProtectedV(tx.Dat.V)
+	return isProtectedV(tx.data.V)
 }
 
 func isProtectedV(V *big.Int) bool {
@@ -130,13 +130,13 @@ func isProtectedV(V *big.Int) bool {
 
 // EncodeRLP implements rlp.Encoder
 func (tx *Transaction) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, &tx.Dat)
+	return rlp.Encode(w, &tx.data)
 }
 
 // DecodeRLP implements rlp.Decoder
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	_, size, _ := s.Kind()
-	err := s.Decode(&tx.Dat)
+	err := s.Decode(&tx.data)
 	if err == nil {
 		tx.size.Store(common.StorageSize(rlp.ListSize(size)))
 		tx.time = time.Now()
@@ -147,14 +147,14 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 // MarshalJSON encodes the web3 RPC transaction format.
 func (tx *Transaction) MarshalJSON() ([]byte, error) {
 	hash := tx.Hash()
-	data := tx.Dat
+	data := tx.data
 	data.Hash = &hash
 	return data.MarshalJSON()
 }
 
 // UnmarshalJSON decodes the web3 RPC transaction format.
 func (tx *Transaction) UnmarshalJSON(input []byte) error {
-	var dec TxData
+	var dec txdata
 	if err := dec.UnmarshalJSON(input); err != nil {
 		return err
 	}
@@ -194,10 +194,10 @@ func (tx *Transaction) CheckNonce() bool { return true }
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
 func (tx *Transaction) To() *common.Address {
-	if tx.Dat.Recipient == nil {
+	if tx.data.Recipient == nil {
 		return nil
 	}
-	to := *tx.Dat.Recipient
+	to := *tx.data.Recipient
 	return &to
 }
 
@@ -219,7 +219,7 @@ func (tx *Transaction) Size() common.StorageSize {
 		return size.(common.StorageSize)
 	}
 	c := writeCounter(0)
-	rlp.Encode(&c, &tx.Dat)
+	rlp.Encode(&c, &tx.data)
 	tx.size.Store(common.StorageSize(c))
 	return common.StorageSize(c)
 }
@@ -231,12 +231,12 @@ func (tx *Transaction) Size() common.StorageSize {
 // XXX Rename message to something less arbitrary?
 func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 	msg := Message{
-		nonce:      tx.Dat.AccountNonce,
-		gasLimit:   tx.Dat.GasLimit,
-		gasPrice:   new(big.Int).Set(tx.Dat.Price),
-		to:         tx.Dat.Recipient,
-		amount:     tx.Dat.Amount,
-		data:       tx.Dat.Payload,
+		nonce:      tx.data.AccountNonce,
+		gasLimit:   tx.data.GasLimit,
+		gasPrice:   new(big.Int).Set(tx.data.Price),
+		to:         tx.data.Recipient,
+		amount:     tx.data.Amount,
+		data:       tx.data.Payload,
 		checkNonce: true,
 	}
 
@@ -262,15 +262,15 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 
 // Cost returns amount + gasprice * gaslimit.
 func (tx *Transaction) Cost() *big.Int {
-	total := new(big.Int).Mul(tx.Dat.Price, new(big.Int).SetUint64(tx.Dat.GasLimit))
-	total.Add(total, tx.Dat.Amount)
+	total := new(big.Int).Mul(tx.data.Price, new(big.Int).SetUint64(tx.data.GasLimit))
+	total.Add(total, tx.data.Amount)
 	return total
 }
 
 // RawSignatureValues returns the V, R, S signature values of the transaction.
 // The return values should not be modified by the caller.
 func (tx *Transaction) RawSignatureValues() (v, r, s *big.Int) {
-	return tx.Dat.V, tx.Dat.R, tx.Dat.S
+	return tx.data.V, tx.data.R, tx.data.S
 }
 
 // Transactions is a Transaction slice type for basic sorting.
@@ -312,7 +312,7 @@ func TxDifference(a, b Transactions) Transactions {
 type TxByNonce Transactions
 
 func (s TxByNonce) Len() int           { return len(s) }
-func (s TxByNonce) Less(i, j int) bool { return s[i].Dat.AccountNonce < s[j].Dat.AccountNonce }
+func (s TxByNonce) Less(i, j int) bool { return s[i].data.AccountNonce < s[j].data.AccountNonce }
 func (s TxByNonce) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
 // TxByPriceAndTime implements both the sort and the heap interface, making it useful

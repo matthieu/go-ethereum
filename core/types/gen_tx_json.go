@@ -14,7 +14,7 @@ import (
 var _ = (*txdataMarshaling)(nil)
 
 // MarshalJSON marshals as JSON.
-func (t TxData) MarshalJSON() ([]byte, error) {
+func (t txdata) MarshalJSON() ([]byte, error) {
 	type txdata struct {
 		AccountNonce hexutil.Uint64  `json:"nonce"    gencodec:"required"`
 		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`
@@ -41,7 +41,7 @@ func (t TxData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&enc)
 }
 
-func (t *TxData) UnmarshalJSON(input []byte) error {
+func (t *txdata) UnmarshalJSON(input []byte) error {
 	type txdata struct {
 		AccountNonce *hexutil.Uint64 `json:"nonce"    gencodec:"required"`
 		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`

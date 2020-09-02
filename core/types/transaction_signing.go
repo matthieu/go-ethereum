@@ -131,9 +131,9 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	if tx.ChainId().Cmp(s.chainId) != 0 {
 		return common.Address{}, ErrInvalidChainId
 	}
-	V := new(big.Int).Sub(tx.Dat.V, s.chainIdMul)
+	V := new(big.Int).Sub(tx.data.V, s.chainIdMul)
 	V.Sub(V, big8)
-	return recoverPlain(s.Hash(tx), tx.Dat.R, tx.Dat.S, V, true)
+	return recoverPlain(s.Hash(tx), tx.data.R, tx.data.S, V, true)
 }
 
 // SignatureValues returns signature values. This signature
@@ -154,12 +154,12 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // It does not uniquely identify the transaction.
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
-		tx.Dat.AccountNonce,
-		tx.Dat.Price,
-		tx.Dat.GasLimit,
-		tx.Dat.Recipient,
-		tx.Dat.Amount,
-		tx.Dat.Payload,
+		tx.data.AccountNonce,
+		tx.data.Price,
+		tx.data.GasLimit,
+		tx.data.Recipient,
+		tx.data.Amount,
+		tx.data.Payload,
 		s.chainId, uint(0), uint(0),
 	})
 }
@@ -180,7 +180,7 @@ func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v 
 }
 
 func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
-	return recoverPlain(hs.Hash(tx), tx.Dat.R, tx.Dat.S, tx.Dat.V, true)
+	return recoverPlain(hs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, true)
 }
 
 type FrontierSigner struct{}
@@ -206,17 +206,17 @@ func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *
 // It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
-		tx.Dat.AccountNonce,
-		tx.Dat.Price,
-		tx.Dat.GasLimit,
-		tx.Dat.Recipient,
-		tx.Dat.Amount,
-		tx.Dat.Payload,
+		tx.data.AccountNonce,
+		tx.data.Price,
+		tx.data.GasLimit,
+		tx.data.Recipient,
+		tx.data.Amount,
+		tx.data.Payload,
 	})
 }
 
 func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
-	return recoverPlain(fs.Hash(tx), tx.Dat.R, tx.Dat.S, tx.Dat.V, false)
+	return recoverPlain(fs.Hash(tx), tx.data.R, tx.data.S, tx.data.V, false)
 }
 
 func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
