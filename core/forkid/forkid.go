@@ -44,9 +44,21 @@ var (
 	ErrLocalIncompatibleOrStale = errors.New("local incompatible or needs update")
 )
 
+<<<<<<< HEAD
 type fBlockChain interface {
 	Config() *params.ChainConfig
 	Genesis() *types.Block
+=======
+// Blockchain defines all necessary method to build a forkID.
+type Blockchain interface {
+	// Config retrieves the chain's fork configuration.
+	Config() *params.ChainConfig
+
+	// Genesis retrieves the chain's genesis block.
+	Genesis() *types.Block
+
+	// CurrentHeader retrieves the current head header of the canonical chain.
+>>>>>>> 979fc96899c77876e15807005eadd936da17b6c2
 	CurrentHeader() *types.Header
 }
 
@@ -60,7 +72,11 @@ type ID struct {
 type Filter func(id ID) error
 
 // NewID calculates the Ethereum fork ID from the chain config and head.
+<<<<<<< HEAD
 func NewID(chain fBlockChain) ID {
+=======
+func NewID(chain Blockchain) ID {
+>>>>>>> 979fc96899c77876e15807005eadd936da17b6c2
 	return newID(
 		chain.Config(),
 		chain.Genesis().Hash(),
@@ -91,7 +107,11 @@ func newID(config *params.ChainConfig, genesis common.Hash, head uint64) ID {
 
 // NewFilter creates a filter that returns if a fork ID should be rejected or not
 // based on the local chain's status.
+<<<<<<< HEAD
 func NewFilter(chain fBlockChain) Filter {
+=======
+func NewFilter(chain Blockchain) Filter {
+>>>>>>> 979fc96899c77876e15807005eadd936da17b6c2
 	return newFilter(
 		chain.Config(),
 		chain.Genesis().Hash(),
@@ -229,7 +249,7 @@ func gatherForks(config *params.ChainConfig) []uint64 {
 			forks = append(forks, rule.Uint64())
 		}
 	}
-	// Sort the fork block numbers to permit chronologival XOR
+	// Sort the fork block numbers to permit chronological XOR
 	for i := 0; i < len(forks); i++ {
 		for j := i + 1; j < len(forks); j++ {
 			if forks[i] > forks[j] {
