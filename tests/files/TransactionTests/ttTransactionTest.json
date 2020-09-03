@@ -64,10 +64,7 @@
     },
     "DataTestLastZeroBytes" : {
         "blocknumber" : "0",
-<<<<<<< HEAD
-=======
         "hash" : "24e46f946aa16e8c290a9b10ff31d72f9e41261d273b804a2789d82ed85de34d",
->>>>>>> upstream/master
         "rlp" : "0xf87c80018261a894095e7baea6a6c7c4c2dfeb977efac326af552d870a9d01000000000000000000000000000000000000000000000000000000001ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804",
         "sender" : "58a93c8f40f721b21dd44c10bfa5d39a3ced78f6",
         "transaction" : {
@@ -155,10 +152,7 @@
     },
     "TransactionWithGasLimitOverflow2" : {
         "blocknumber" : "0",
-<<<<<<< HEAD
-=======
         "hash" : "fb8bdb8c221344a131a0473a3912b9bff281285b47522992b1f298686d0cdb48",
->>>>>>> upstream/master
         "rlp" : "0xf865800188800000000000000094095e7baea6a6c7c4c2dfeb977efac326af552d870b801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804",
         "sender" : "6986b102a5375abef1f739a3b5d9baa228a4fca4",
         "transaction" : {
@@ -175,10 +169,7 @@
     },
     "TransactionWithGasLimitOverflow63" : {
         "blocknumber" : "0",
-<<<<<<< HEAD
-=======
         "hash" : "fb8bdb8c221344a131a0473a3912b9bff281285b47522992b1f298686d0cdb48",
->>>>>>> upstream/master
         "rlp" : "0xf865800188800000000000000094095e7baea6a6c7c4c2dfeb977efac326af552d870b801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804",
         "sender" : "6986b102a5375abef1f739a3b5d9baa228a4fca4",
         "transaction" : {
@@ -195,10 +186,7 @@
     },
     "TransactionWithGasLimitOverflow63_1" : {
         "blocknumber" : "0",
-<<<<<<< HEAD
-=======
         "hash" : "f4a1caa6a8a3c08b8fe1528c862e626720298edb7dca2aee3d10ff8a947af12e",
->>>>>>> upstream/master
         "rlp" : "0xf865800188800000000000000194095e7baea6a6c7c4c2dfeb977efac326af552d870b801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804",
         "sender" : "41cc818b2cd4606ff8981a38daf7c4f12d40ed28",
         "transaction" : {
@@ -232,10 +220,7 @@
     },
     "TransactionWithGasLimitxPriceOverflow2" : {
         "blocknumber" : "0",
-<<<<<<< HEAD
-=======
         "hash" : "332613ab7b44cda1652efc59035c6f2c74dfbbe7289f816775796cda08d0d151",
->>>>>>> upstream/master
         "rlp" : "0xf86780873b9403b9403b5c8398968094095e7baea6a6c7c4c2dfeb977efac326af552d8780801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804",
         "sender" : "05af62c0a8db23608f68370e503617b32a6ac0d0",
         "transaction" : {
@@ -260,10 +245,7 @@
     },
     "TransactionWithHihghGas" : {
         "blocknumber" : "0",
-<<<<<<< HEAD
-=======
         "hash" : "209466e8f6b969c2075bf546938265a13eee23caf7d59e4d7c4e54c26eb482ec",
->>>>>>> upstream/master
         "rlp" : "0xf8658001887fffffffffffffff94095e7baea6a6c7c4c2dfeb977efac326af552d8780801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804",
         "sender" : "03a3ce84aa05891249cde4fff6c82acb009af03f",
         "transaction" : {
@@ -297,10 +279,7 @@
     },
     "TransactionWithHihghGasPrice2" : {
         "blocknumber" : "0",
-<<<<<<< HEAD
-=======
         "hash" : "40bb41d9b8dd1a2a4f26b8f03acfe686fe8097fda4fb8d286a2dbfa63ea374f2",
->>>>>>> upstream/master
         "rlp" : "0xf865808698852840a46f82520894095e7baea6a6c7c4c2dfeb977efac326af552d8780801ba048b55bfa915ac795c431978d8a6a992b628d557da5ff759b307d495a36649353a0efffd310ac743f371de3b9f7f9cb56c0b28ad43601b4ab949f53faa07bd2c804",
         "sender" : "d45c1531bf3d368879a474400d1b1f8a0a31b95c",
         "transaction" : {
