@@ -73,6 +73,9 @@ type pmBlockChain interface {
 	TrieNode(hash common.Hash) ([]byte, error)
 	GetReceiptsByHash(hash common.Hash) types.Receipts
 	GetTdByHash(hash common.Hash) *big.Int
+	StopInsert()
+	SetTxLookupLimit(limit uint64)
+	TxLookupLimit() uint64
 }
 
 type ProtocolManager struct {
@@ -86,7 +89,7 @@ type ProtocolManager struct {
 	checkpointHash   common.Hash // Block hash for the sync progress validator to cross reference
 
 	txpool     txPool
-	blockchain *core.BlockChain
+	blockchain pmBlockChain
 	chaindb    ethdb.Database
 	maxPeers   int
 
