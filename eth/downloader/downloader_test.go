@@ -97,12 +97,6 @@ func (dl *downloadTester) terminate() {
 	dl.downloader.Terminate()
 }
 
-// terminate aborts any operations on the embedded downloader and releases all
-// held resources.
-func (dl *downloadTester) terminate() {
-	dl.downloader.Terminate()
-}
-
 // sync starts synchronizing with a remote peer, blocking until it completes.
 func (dl *downloadTester) sync(id string, td *big.Int, mode SyncMode) error {
 	dl.lock.RLock()

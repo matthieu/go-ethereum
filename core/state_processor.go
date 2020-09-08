@@ -140,5 +140,5 @@ func ApplyTransaction(config *params.ChainConfig, bc ChainContext, author *commo
 
 	itx.SetParentHash(tx.Hash())
 
-	return receipt, gas, itx.InternalTransactions(), vmerr, err
+	return receipt, result.GasUsed, itx.InternalTransactions(), result.Err, err
 }
