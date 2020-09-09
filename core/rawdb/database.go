@@ -41,10 +41,10 @@ type freezerdb struct {
 // the slow ancient tables.
 func (frdb *freezerdb) Close() error {
 	var errs []error
-	if err := frdb.KeyValueStore.Close(); err != nil {
+	if err := frdb.AncientStore.Close(); err != nil {
 		errs = append(errs, err)
 	}
-	if err := frdb.AncientStore.Close(); err != nil {
+	if err := frdb.KeyValueStore.Close(); err != nil {
 		errs = append(errs, err)
 	}
 	if len(errs) != 0 {
@@ -137,7 +137,10 @@ func NewDatabaseWithFreezer(db ethdb.KeyValueStore, freezer string, namespace st
 			// If the freezer already contains something, ensure that the genesis blocks
 			// match, otherwise we might mix up freezers across chains and destroy both
 			// the freezer and the key-value store.
-			if frgenesis, _ := frdb.Ancient(freezerHashTable, 0); !bytes.Equal(kvgenesis, frgenesis) {
+			frgenesis, err := frdb.Ancient(freezerHashTable, 0)
+			if err != nil {
+				return nil, fmt.Errorf("failed to retrieve genesis from ancient %v", err)
+			} else if !bytes.Equal(kvgenesis, frgenesis) {
 				return nil, fmt.Errorf("genesis mismatch: %#x (leveldb) != %#x (ancients)", kvgenesis, frgenesis)
 			}
 			// Key-value store and freezer belong to the same network. Ensure that they
@@ -221,7 +224,7 @@ func NewLevelDBDatabaseWithFreezer(file string, cache int, handles int, freezer 
 // InspectDatabase traverses the entire database and checks the size
 // of all different categories of data.
 func InspectDatabase(db ethdb.Database) error {
-	it := db.NewIterator()
+	it := db.NewIterator(nil, nil)
 	defer it.Release()
 
 	var (
@@ -239,6 +242,8 @@ func InspectDatabase(db ethdb.Database) error {
 		hashNumPairing  common.StorageSize
 		trieSize        common.StorageSize
 		txlookupSize    common.StorageSize
+		accountSnapSize common.StorageSize
+		storageSnapSize common.StorageSize
 		preimageSize    common.StorageSize
 		bloomBitsSize   common.StorageSize
 		cliqueSnapsSize common.StorageSize
@@ -280,6 +285,10 @@ func InspectDatabase(db ethdb.Database) error {
 			receiptSize += size
 		case bytes.HasPrefix(key, txLookupPrefix) && len(key) == (len(txLookupPrefix)+common.HashLength):
 			txlookupSize += size
+		case bytes.HasPrefix(key, SnapshotAccountPrefix) && len(key) == (len(SnapshotAccountPrefix)+common.HashLength):
+			accountSnapSize += size
+		case bytes.HasPrefix(key, SnapshotStoragePrefix) && len(key) == (len(SnapshotStoragePrefix)+2*common.HashLength):
+			storageSnapSize += size
 		case bytes.HasPrefix(key, preimagePrefix) && len(key) == (len(preimagePrefix)+common.HashLength):
 			preimageSize += size
 		case bytes.HasPrefix(key, bloomBitsPrefix) && len(key) == (len(bloomBitsPrefix)+10+common.HashLength):
@@ -331,6 +340,8 @@ func InspectDatabase(db ethdb.Database) error {
 		{"Key-Value store", "Bloombit index", bloomBitsSize.String()},
 		{"Key-Value store", "Trie nodes", trieSize.String()},
 		{"Key-Value store", "Trie preimages", preimageSize.String()},
+		{"Key-Value store", "Account snapshot", accountSnapSize.String()},
+		{"Key-Value store", "Storage snapshot", storageSnapSize.String()},
 		{"Key-Value store", "Clique snapshots", cliqueSnapsSize.String()},
 		{"Key-Value store", "Singleton metadata", metadata.String()},
 		{"Ancient store", "Headers", ancientHeaders.String()},

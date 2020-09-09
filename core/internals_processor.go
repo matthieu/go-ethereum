@@ -70,7 +70,7 @@ func (self *InternalTxWatcher) RegisterSuicide(nonce uint64, gasPrice *big.Int, 
 	self.internals = append(self.internals,
 		types.NewInternalTransaction(nonce, gasPrice, gas,
 			contractAddr, creatorAddr, remainingValue,
-			append([]byte{vm.SELFDESTRUCT}, creatorAddr[:]...),
+			append([]byte{byte(vm.SELFDESTRUCT)}, creatorAddr[:]...),
 			depth, self.index(), "suicide"))
 }
 

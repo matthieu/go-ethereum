@@ -350,7 +350,6 @@ func (node *ServerNode) QueuedRequest(reqID, maxCost uint64) {
 	if node.bufEstimate >= maxCost {
 		node.bufEstimate -= maxCost
 	} else {
-		log.Error("Queued request with insufficient buffer estimate")
 		node.bufEstimate = 0
 	}
 	node.sumCost += maxCost
