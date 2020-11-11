@@ -20,7 +20,6 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/core/vm"
 	"github.com/matthieu/go-ethereum/params"
@@ -190,14 +189,11 @@ func (st *StateTransition) buyGas() error {
 
 func (st *StateTransition) preCheck() error {
 	// Make sure this transaction's nonce is correct.
-	spew.Dump(st)
 	if st.msg.CheckNonce() {
 		nonce := st.state.GetNonce(st.msg.From())
 		if nonce < st.msg.Nonce() {
 			return ErrNonceTooHigh
 		} else if nonce > st.msg.Nonce() {
-			spew.Dump(nonce)
-			spew.Dump(st.msg.Nonce())
 			return ErrNonceTooLow
 		}
 	}
