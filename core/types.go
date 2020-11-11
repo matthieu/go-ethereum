@@ -44,5 +44,5 @@ type Prefetcher interface {
 
 // Processor is an interface for processing blocks using a given initial state.
 type Processor interface {
-	Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, []types.InternalTransactions, []string, uint64, error)
+	Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, []types.InternalTransactions, uint64, error)
 }

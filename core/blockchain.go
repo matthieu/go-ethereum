@@ -28,6 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/common/mclock"
 	"github.com/matthieu/go-ethereum/common/prque"
@@ -44,7 +45,6 @@ import (
 	"github.com/matthieu/go-ethereum/params"
 	"github.com/matthieu/go-ethereum/rlp"
 	"github.com/matthieu/go-ethereum/trie"
-	lru "github.com/hashicorp/golang-lru"
 )
 
 var (
@@ -1790,7 +1790,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 		}
 		// Process block using the parent state as reference point
 		substart := time.Now()
-		receipts, logs, _, _, usedGas, err := bc.processor.Process(block, statedb, bc.vmConfig)
+		receipts, logs, _, usedGas, err := bc.processor.Process(block, statedb, bc.vmConfig)
 		if err != nil {
 			bc.reportBlock(block, receipts, err)
 			atomic.StoreUint32(&followupInterrupt, 1)
