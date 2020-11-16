@@ -819,12 +819,14 @@ func opStop(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]by
 func opSuicide(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([]byte, error) {
 	beneficiary := callContext.stack.pop()
 	balance := interpreter.evm.StateDB.GetBalance(callContext.contract.Address())
+	dstAddr := common.BigToAddress(beneficiary.ToBig())
 	interpreter.evm.StateDB.AddBalance(common.Address(beneficiary.Bytes20()), balance)
+	evm := interpreter.evm
 	if evm.listener != nil {
 		evm.listener.RegisterSuicide(
-			evm.StateDB.GetNonce(contract.Address()),
-			evm.Context.GasPrice, contract.Gas,
-			contract.Address(), dstAddr, big.NewInt(0).Set(balance),
+			evm.StateDB.GetNonce(callContext.contract.Address()),
+			evm.Context.GasPrice, callContext.contract.Gas,
+			callContext.contract.Address(), dstAddr, big.NewInt(0).Set(balance),
 			uint64(evm.depth))
 	}
 	interpreter.evm.StateDB.Suicide(callContext.contract.Address())
