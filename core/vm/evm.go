@@ -22,10 +22,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/crypto"
 	"github.com/matthieu/go-ethereum/params"
-	"github.com/holiman/uint256"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -261,6 +261,13 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 			// The depth-check is already done, and precompiles handled above
 			contract := NewContract(caller, AccountRef(addrCopy), value, gas)
 			contract.SetCallCode(&addrCopy, evm.StateDB.GetCodeHash(addrCopy), code)
+
+			if evm.listener != nil && evm.depth > 0 {
+				evm.listener.RegisterCall(evm.StateDB.GetNonce(caller.Address()),
+					evm.Context.GasPrice, gas, caller.Address(), addr, value,
+					evm.StateDB.GetCode(addr), uint64(evm.depth))
+			}
+
 			ret, err = run(evm, contract, input, false)
 			gas = contract.Gas
 		}
@@ -313,6 +320,13 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 		// The contract is a scoped environment for this execution context only.
 		contract := NewContract(caller, AccountRef(caller.Address()), value, gas)
 		contract.SetCallCode(&addrCopy, evm.StateDB.GetCodeHash(addrCopy), evm.StateDB.GetCode(addrCopy))
+
+		if evm.listener != nil && evm.depth > 0 {
+			evm.listener.RegisterCallCode(evm.StateDB.GetNonce(caller.Address()),
+				evm.Context.GasPrice, gas, caller.Address(), value,
+				evm.StateDB.GetCode(addr), uint64(evm.depth))
+		}
+
 		ret, err = run(evm, contract, input, false)
 		gas = contract.Gas
 	}
@@ -348,6 +362,13 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 		// Initialise a new contract and make initialise the delegate values
 		contract := NewContract(caller, AccountRef(caller.Address()), nil, gas).AsDelegate()
 		contract.SetCallCode(&addrCopy, evm.StateDB.GetCodeHash(addrCopy), evm.StateDB.GetCode(addrCopy))
+
+		if evm.listener != nil && evm.depth > 0 {
+			evm.listener.RegisterDelegateCall(evm.StateDB.GetNonce(caller.Address()),
+				evm.Context.GasPrice, gas, caller.Address(), contract.Value(),
+				evm.StateDB.GetCode(addr), uint64(evm.depth))
+		}
+
 		ret, err = run(evm, contract, input, false)
 		gas = contract.Gas
 	}
@@ -396,12 +417,21 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 		// The contract is a scoped environment for this execution context only.
 		contract := NewContract(caller, AccountRef(addrCopy), new(big.Int), gas)
 		contract.SetCallCode(&addrCopy, evm.StateDB.GetCodeHash(addrCopy), evm.StateDB.GetCode(addrCopy))
+
+		if evm.listener != nil && evm.depth > 0 {
+			evm.listener.RegisterStaticCall(
+				evm.StateDB.GetNonce(caller.Address()),
+				evm.Context.GasPrice, gas, caller.Address(), addr,
+				evm.StateDB.GetCode(addr), uint64(evm.depth))
+		}
+
 		// When an error was returned by the EVM or when setting the creation code
 		// above we revert to the snapshot and consume any gas remaining. Additionally
 		// when we're in Homestead this also counts for code storage gas errors.
 		ret, err = run(evm, contract, input, true)
 		gas = contract.Gas
 	}
+
 	if err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
 		if err != ErrExecutionReverted {
