@@ -17,10 +17,12 @@
 package vm
 
 import (
+	"math/big"
+
+	"github.com/holiman/uint256"
 	"github.com/matthieu/go-ethereum/common"
 	"github.com/matthieu/go-ethereum/core/types"
 	"github.com/matthieu/go-ethereum/params"
-	"github.com/holiman/uint256"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -818,6 +820,13 @@ func opSuicide(pc *uint64, interpreter *EVMInterpreter, callContext *callCtx) ([
 	beneficiary := callContext.stack.pop()
 	balance := interpreter.evm.StateDB.GetBalance(callContext.contract.Address())
 	interpreter.evm.StateDB.AddBalance(common.Address(beneficiary.Bytes20()), balance)
+	if evm.listener != nil {
+		evm.listener.RegisterSuicide(
+			evm.StateDB.GetNonce(contract.Address()),
+			evm.Context.GasPrice, contract.Gas,
+			contract.Address(), dstAddr, big.NewInt(0).Set(balance),
+			uint64(evm.depth))
+	}
 	interpreter.evm.StateDB.Suicide(callContext.contract.Address())
 	return nil, nil
 }
