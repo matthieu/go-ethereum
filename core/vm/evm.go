@@ -239,6 +239,12 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	}
 	evm.Transfer(evm.StateDB, caller.Address(), addr, value)
 
+	if evm.listener != nil && evm.depth > 0 {
+		evm.listener.RegisterCall(evm.StateDB.GetNonce(caller.Address()),
+			evm.Context.GasPrice, gas, caller.Address(), addr, value,
+			evm.StateDB.GetCode(addr), uint64(evm.depth))
+	}
+
 	// Capture the tracer start/end events in debug mode
 	if evm.vmConfig.Debug && evm.depth == 0 {
 		evm.vmConfig.Tracer.CaptureStart(caller.Address(), addr, false, input, gas, value)
@@ -261,12 +267,6 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 			// The depth-check is already done, and precompiles handled above
 			contract := NewContract(caller, AccountRef(addrCopy), value, gas)
 			contract.SetCallCode(&addrCopy, evm.StateDB.GetCodeHash(addrCopy), code)
-
-			if evm.listener != nil && evm.depth > 0 {
-				evm.listener.RegisterCall(evm.StateDB.GetNonce(caller.Address()),
-					evm.Context.GasPrice, gas, caller.Address(), addr, value,
-					evm.StateDB.GetCode(addr), uint64(evm.depth))
-			}
 
 			ret, err = run(evm, contract, input, false)
 			gas = contract.Gas
